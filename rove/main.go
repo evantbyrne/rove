@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/alecthomas/kong"
@@ -22,12 +21,20 @@ type MachineCommandAdd struct {
 func (cmd *MachineCommandAdd) Run() error {
 	key, err := os.ReadFile(cmd.PrivateKeyFile)
 	if err != nil {
-		log.Fatalf("unable to read private key file: %v", err)
+		return fmt.Errorf("unable to read private key file: %v", err)
 	}
-	client := rove.SshConnect(cmd.Address, cmd.User, key)
-	fmt.Println(rove.SshRun(client, "whoami"))
-	fmt.Println(rove.SshRun(client, "sudo docker run hello-world"))
-	return nil
+	return rove.SshConnect(cmd.Address, cmd.User, key, func(conn *rove.SshConnection) error {
+		return conn.
+			Run("whoami", func(res string) error {
+				fmt.Println(res)
+				return nil
+			}).
+			Run("sudo docker run hello-world", func(res string) error {
+				fmt.Println(res)
+				return nil
+			}).
+			Error
+	})
 }
 
 var cli struct {
