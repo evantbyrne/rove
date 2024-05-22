@@ -25,6 +25,7 @@ type MachineCommandAdd struct {
 	PrivateKeyFile string `arg:"" name:"pk" help:"Private key file." type:"path"`
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Port       int64  `flag:"" name:"port" help:"SSH port of remote machine." default:"22"`
 }
 
 func (cmd *MachineCommandAdd) Run() error {
@@ -48,8 +49,8 @@ func (cmd *MachineCommandAdd) Run() error {
 	if err != nil {
 		return fmt.Errorf("unable to read private key file: %v", err)
 	}
-	err = rove.SshConnect(cmd.Address, cmd.User, key, func(conn *rove.SshConnection) error {
-		fmt.Printf("✅ Connected to remote address '%s@%s'\n", cmd.User, cmd.Address)
+	err = rove.SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn *rove.SshConnection) error {
+		fmt.Printf("✅ Connected to remote address '%s@%s:%d'\n", cmd.User, cmd.Address, cmd.Port)
 		return conn.
 			Run("sudo docker run hello-world", func(res string) error {
 				fmt.Println("✅ Verified remote docker installation")
@@ -57,6 +58,7 @@ func (cmd *MachineCommandAdd) Run() error {
 					Address: cmd.Address,
 					KeyPath: cmd.PrivateKeyFile,
 					Name:    cmd.Name,
+					Port:    cmd.Port,
 					User:    cmd.User,
 				}).Error
 				if err == nil {
