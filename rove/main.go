@@ -9,7 +9,6 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/evantbyrne/rove"
-	"github.com/evantbyrne/rove/migrations"
 	"github.com/evantbyrne/trance"
 	"github.com/evantbyrne/trance/sqlitedialect"
 
@@ -40,68 +39,54 @@ type MachineCommandAdd struct {
 }
 
 func (cmd *MachineCommandAdd) Run() error {
-	trance.SetDialect(sqlitedialect.SqliteDialect{})
-	db, err := sql.Open("sqlite", fmt.Sprint("file:", cmd.ConfigFile))
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	trance.UseDatabase(db)
-
-	_, err = trance.MigrateUp([]trance.Migration{
-		migrations.Migration0001Init{},
-	})
-	if err != nil {
-		return err
-	}
-
-	key, err := os.ReadFile(cmd.PrivateKeyFile)
-	if err != nil {
-		return fmt.Errorf("unable to read private key file: %v", err)
-	}
-	err = rove.SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn *rove.SshConnection) error {
-		fmt.Printf("✅ Connected to remote address '%s@%s:%d'\n", cmd.User, cmd.Address, cmd.Port)
-		return conn.
-			Run("docker info --format json", func(res string) error {
-				var dockerInfo DockerInfoJson
-				if err := json.Unmarshal([]byte(res), &dockerInfo); err != nil {
-					fmt.Println("🚫 Could not parse docker info JSON:\n", res)
-					return err
-				}
-				if dockerInfo.Swarm.NodeID != "" {
-					fmt.Println("✅ Remote machine already part of a swarm")
-					return rove.ErrorSkip{}
-				}
-				return nil
+	return rove.Database(cmd.ConfigFile, func() error {
+		key, err := os.ReadFile(cmd.PrivateKeyFile)
+		if err != nil {
+			return fmt.Errorf("unable to read private key file: %v", err)
+		}
+		err = rove.SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn *rove.SshConnection) error {
+			fmt.Printf("✅ Connected to remote address '%s@%s:%d'\n", cmd.User, cmd.Address, cmd.Port)
+			return conn.
+				Run("docker info --format json", func(res string) error {
+					var dockerInfo DockerInfoJson
+					if err := json.Unmarshal([]byte(res), &dockerInfo); err != nil {
+						fmt.Println("🚫 Could not parse docker info JSON:\n", res)
+						return err
+					}
+					if dockerInfo.Swarm.NodeID != "" {
+						fmt.Println("✅ Remote machine already part of a swarm")
+						return rove.ErrorSkip{}
+					}
+					return nil
+				}).
+				Run(fmt.Sprintf("docker swarm init --advertise-addr %s", cmd.Address), func(_ string) error {
+					fmt.Println("✅ Enabled swarm on remote machine")
+					return nil
+				}).
+				Error
+		})
+		if err != nil && !errors.Is(err, rove.ErrorSkip{}) {
+			fmt.Println("🚫 Could not add machine")
+			return err
+		}
+		return trance.Query[rove.Machine]().
+			Insert(&rove.Machine{
+				Address: cmd.Address,
+				KeyPath: cmd.PrivateKeyFile,
+				Name:    cmd.Name,
+				Port:    cmd.Port,
+				User:    cmd.User,
 			}).
-			Run(fmt.Sprintf("docker swarm init --advertise-addr %s", cmd.Address), func(_ string) error {
-				fmt.Println("✅ Enabled swarm on remote machine")
+			OnError(func(err error) error {
+				fmt.Println("🚫 Could not add machine")
+				return err
+			}).
+			Then(func(_ sql.Result, _ *rove.Machine) error {
+				fmt.Printf("✅ Added machine '%s'\n", cmd.Name)
 				return nil
 			}).
 			Error
 	})
-	if err != nil && !errors.Is(err, rove.ErrorSkip{}) {
-		fmt.Println("🚫 Could not add machine")
-		return err
-	}
-	return trance.Query[rove.Machine]().
-		Insert(&rove.Machine{
-			Address: cmd.Address,
-			KeyPath: cmd.PrivateKeyFile,
-			Name:    cmd.Name,
-			Port:    cmd.Port,
-			User:    cmd.User,
-		}).
-		OnError(func(err error) error {
-			fmt.Println("🚫 Could not add machine")
-			return err
-		}).
-		Then(func(_ sql.Result, _ *rove.Machine) error {
-			fmt.Printf("✅ Added machine '%s'\n", cmd.Name)
-			return nil
-		}).
-		Error
 }
 
 var cli struct {
@@ -109,6 +94,7 @@ var cli struct {
 }
 
 func main() {
+	trance.SetDialect(sqlitedialect.SqliteDialect{})
 	ctx := kong.Parse(&cli)
 	err := ctx.Run()
 	ctx.FatalIfErrorf(err)
