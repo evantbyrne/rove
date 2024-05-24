@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -13,6 +15,15 @@ import (
 
 	_ "modernc.org/sqlite"
 )
+
+type DockerInfoJson struct {
+	Swarm DockerInfoSwarmJson `json:"Swarm"`
+}
+
+type DockerInfoSwarmJson struct {
+	NodeID         string `json:"NodeID"`
+	LocalNodeState string `json:"LocalNodeState"`
+}
 
 type MachineCommand struct {
 	Add MachineCommandAdd `cmd:""`
@@ -52,26 +63,45 @@ func (cmd *MachineCommandAdd) Run() error {
 	err = rove.SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn *rove.SshConnection) error {
 		fmt.Printf("✅ Connected to remote address '%s@%s:%d'\n", cmd.User, cmd.Address, cmd.Port)
 		return conn.
-			Run("sudo docker run hello-world", func(res string) error {
-				fmt.Println("✅ Verified remote docker installation")
-				err := trance.Query[rove.Machine]().Insert(&rove.Machine{
-					Address: cmd.Address,
-					KeyPath: cmd.PrivateKeyFile,
-					Name:    cmd.Name,
-					Port:    cmd.Port,
-					User:    cmd.User,
-				}).Error
-				if err == nil {
-					fmt.Printf("✅ Added machine '%s'\n", cmd.Name)
+			Run("docker info --format json", func(res string) error {
+				var dockerInfo DockerInfoJson
+				if err := json.Unmarshal([]byte(res), &dockerInfo); err != nil {
+					fmt.Println("🚫 Could not parse docker info JSON:\n", res)
+					return err
 				}
-				return err
+				if dockerInfo.Swarm.NodeID != "" {
+					fmt.Println("✅ Remote machine already part of a swarm")
+					return rove.ErrorSkip{}
+				}
+				return nil
+			}).
+			Run(fmt.Sprintf("docker swarm init --advertise-addr %s", cmd.Address), func(_ string) error {
+				fmt.Println("✅ Enabled swarm on remote machine")
+				return nil
 			}).
 			Error
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, rove.ErrorSkip{}) {
 		fmt.Println("🚫 Could not add machine")
+		return err
 	}
-	return err
+	return trance.Query[rove.Machine]().
+		Insert(&rove.Machine{
+			Address: cmd.Address,
+			KeyPath: cmd.PrivateKeyFile,
+			Name:    cmd.Name,
+			Port:    cmd.Port,
+			User:    cmd.User,
+		}).
+		OnError(func(err error) error {
+			fmt.Println("🚫 Could not add machine")
+			return err
+		}).
+		Then(func(_ sql.Result, _ *rove.Machine) error {
+			fmt.Printf("✅ Added machine '%s'\n", cmd.Name)
+			return nil
+		}).
+		Error
 }
 
 var cli struct {
