@@ -3,9 +3,9 @@ package rove
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/evantbyrne/trance"
 )
@@ -27,6 +27,7 @@ type MachineAddCommand struct {
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Port       int64  `flag:"" name:"port" help:"SSH port of remote machine." default:"22"`
+	Prefix     string `flag:"" name:"prefix" help:"Network prefix." default:"rove."`
 }
 
 func (cmd *MachineAddCommand) Run() error {
@@ -54,9 +55,22 @@ func (cmd *MachineAddCommand) Run() error {
 					fmt.Println("✅ Enabled swarm on remote machine")
 					return nil
 				}).
+				OnError(SkipReset).
+				Run(fmt.Sprint("docker network ls --format json --filter label=rove --filter name=", cmd.Prefix, "default"), func(res string) error {
+					if lines := strings.Split(strings.ReplaceAll(res, "\r\n", "\n"), "\n"); len(lines) > 1 {
+						fmt.Println("✅ Default network already exists")
+						return ErrorSkip{}
+					}
+					return nil
+				}).
+				Run(fmt.Sprint("docker network create --attachable --label rove ", cmd.Prefix, "default"), func(res string) error {
+					fmt.Println("✅ Created default network")
+					return nil
+				}).
+				OnError(SkipReset).
 				Error
 		})
-		if err != nil && !errors.Is(err, ErrorSkip{}) {
+		if err != nil {
 			fmt.Println("🚫 Could not add machine")
 			return err
 		}

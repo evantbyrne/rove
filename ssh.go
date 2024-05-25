@@ -33,6 +33,13 @@ type SshConnection struct {
 	Error  error
 }
 
+func (conn *SshConnection) OnError(callback func(error) error) *SshConnection {
+	if conn.Error != nil {
+		conn.Error = callback(conn.Error)
+	}
+	return conn
+}
+
 func (conn *SshConnection) Run(command string, callback func(string) error) *SshConnection {
 	if conn.Error != nil {
 		return conn
