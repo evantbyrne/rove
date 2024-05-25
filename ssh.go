@@ -2,9 +2,12 @@ package rove
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
+	"os"
 
+	"github.com/evantbyrne/trance"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -26,6 +29,30 @@ func SshConnect(address string, user string, key []byte, callback func(conn *Ssh
 	}
 	defer client.Close()
 	return callback(&SshConnection{Client: client})
+}
+
+func SshMachine(machine *Machine, callback func(conn *SshConnection) error) error {
+	key, err := os.ReadFile(machine.KeyPath)
+	if err != nil {
+		return fmt.Errorf("unable to read private key file: %v", err)
+	}
+	return SshConnect(fmt.Sprintf("%s:%d", machine.Address, machine.Port), machine.User, key, callback)
+}
+
+func SshMachineByName(name string, callback func(conn *SshConnection) error) error {
+	return trance.Query[Machine]().
+		Filter("name", "=", name).
+		First().
+		OnError(func(err error) error {
+			if err != nil && errors.Is(err, trance.ErrorNotFound{}) {
+				return fmt.Errorf("🚫 No machine with name '%s' configured", name)
+			}
+			return err
+		}).
+		Then(func(machine *Machine) error {
+			return SshMachine(machine, callback)
+		}).
+		Error
 }
 
 type SshConnection struct {
