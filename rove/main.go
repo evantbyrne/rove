@@ -16,6 +16,7 @@ var cli struct {
 	Network struct {
 		Add    rove.NetworkAddCommand    `cmd:""`
 		Delete rove.NetworkDeleteCommand `cmd:""`
+		List   rove.NetworkListCommand   `cmd:""`
 	} `cmd:"" help:"Manage networks."`
 	Run rove.RunCommand `cmd:"" help:"Run containers"`
 }
