@@ -20,7 +20,10 @@ var cli struct {
 		Delete rove.NetworkDeleteCommand `cmd:""`
 		List   rove.NetworkListCommand   `cmd:""`
 	} `cmd:"" help:"Manage networks."`
-	Run rove.RunCommand `cmd:"" help:"Run containers"`
+	Run     rove.RunCommand `cmd:"" help:"Run containers"`
+	Service struct {
+		Run rove.ServiceRunCommand `cmd:""`
+	} `cmd:"" help:"Manage networks."`
 }
 
 func main() {
