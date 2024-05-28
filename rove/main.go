@@ -11,8 +11,9 @@ import (
 
 var cli struct {
 	Machine struct {
-		Add  rove.MachineAddCommand  `cmd:""`
-		List rove.MachineListCommand `cmd:""`
+		Add    rove.MachineAddCommand    `cmd:""`
+		Delete rove.MachineDeleteCommand `cmd:""`
+		List   rove.MachineListCommand   `cmd:""`
 	} `cmd:"" help:"Manage machines."`
 	Network struct {
 		Add    rove.NetworkAddCommand    `cmd:""`
