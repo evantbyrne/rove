@@ -16,7 +16,7 @@ func (arg ShellArg) String() string {
 	if !arg.Check || arg.Value == "" {
 		return ""
 	}
-	return shellescape.Quote(arg.Value)
+	return arg.Value
 }
 
 type ShellCommand struct {
