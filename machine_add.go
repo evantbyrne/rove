@@ -74,6 +74,10 @@ func (cmd *MachineAddCommand) Run() error {
 			fmt.Println("🚫 Could not add machine")
 			return err
 		}
+		if err = SetPreference(DefaultMachine, cmd.Name).Error; err != nil {
+			fmt.Printf("🚫 Could not set default machine to '%s'\n", cmd.Name)
+			return err
+		}
 		return trance.Query[Machine]().
 			Insert(&Machine{
 				Address: cmd.Address,
@@ -88,6 +92,7 @@ func (cmd *MachineAddCommand) Run() error {
 			}).
 			Then(func(_ sql.Result, _ *Machine) error {
 				fmt.Printf("✅ Added machine '%s'\n", cmd.Name)
+				fmt.Printf("✅ Set default machine to '%s'\n", cmd.Name)
 				return nil
 			}).
 			Error

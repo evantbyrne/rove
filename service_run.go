@@ -23,12 +23,12 @@ type DockerServiceInspectJson struct {
 }
 
 type ServiceRunCommand struct {
-	MachineName string   `arg:"" name:"machine" help:"Name of machine."`
-	Name        string   `arg:"" name:"name" help:"Name of service."`
-	Image       string   `arg:"" name:"image" help:"Docker image."`
-	Command     []string `arg:"" name:"command" optional:"" passthrough:"" help:"Docker command."`
+	Name    string   `arg:"" name:"name" help:"Name of service."`
+	Image   string   `arg:"" name:"image" help:"Docker image."`
+	Command []string `arg:"" name:"command" optional:"" passthrough:"" help:"Docker command."`
 
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
 	Network    string   `flag:"" name:"network" help:"Network name." default:""`
 	Prefix     string   `flag:"" name:"prefix" help:"Network prefix." default:"rove."`
 	Publish    []string `flag:"" name:"port" short:"p"`
@@ -36,7 +36,7 @@ type ServiceRunCommand struct {
 
 func (cmd *ServiceRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.MachineName, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
 			command := ShellCommand{
 				Name: "docker service create",
 				Flags: []ShellFlag{

@@ -8,3 +8,8 @@ type Machine struct {
 	Port    int64  `@:"port" json:"-"`
 	User    string `@:"user" @length:"255" json:"-"`
 }
+
+type Preference struct {
+	Name  string `@:"name" @length:"255" @primary:"true"`
+	Value string `@:"value"  @length:"2048"`
+}

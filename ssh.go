@@ -2,6 +2,7 @@ package rove
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"log"
@@ -40,6 +41,10 @@ func SshMachine(machine *Machine, callback func(conn *SshConnection) error) erro
 }
 
 func SshMachineByName(name string, callback func(conn *SshConnection) error) error {
+	name = cmp.Or(name, GetPreference(DefaultMachine))
+	if name == "" {
+		return errors.New("🚫 No machine specified. Either run `rove machine use [NAME]` to set the default, or use the `--machine [NAME]` flag on individual commands")
+	}
 	return trance.Query[Machine]().
 		Filter("name", "=", name).
 		First().

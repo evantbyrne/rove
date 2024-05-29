@@ -26,7 +26,11 @@ func (cmd *MachineDeleteCommand) Run() error {
 			}).
 			Then(func(_ *Machine) error {
 				fmt.Printf("✅ Deleted machine '%s'\n", cmd.Name)
-				return nil
+				return trance.Query[Preference]().
+					Filter("name", "=", string(DefaultMachine)).
+					Filter("value", "=", cmd.Name).
+					Delete().
+					Error
 			}).
 			OnError(func(err error) error {
 				if errors.Is(err, trance.ErrorNotFound{}) {
