@@ -32,6 +32,14 @@ type MachineAddCommand struct {
 
 func (cmd *MachineAddCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
+		exists, err := trance.Query[Machine]().Filter("name", "=", cmd.Name).Exists()
+		if err != nil {
+			return fmt.Errorf("unable to check if machine exists: %v", err)
+		}
+		if exists {
+			return fmt.Errorf("machine with name '%s' already configured", cmd.Name)
+		}
+
 		key, err := os.ReadFile(cmd.PrivateKeyFile)
 		if err != nil {
 			return fmt.Errorf("unable to read private key file: %v", err)
@@ -74,10 +82,6 @@ func (cmd *MachineAddCommand) Run() error {
 			fmt.Println("🚫 Could not add machine")
 			return err
 		}
-		if err = SetPreference(DefaultMachine, cmd.Name).Error; err != nil {
-			fmt.Printf("🚫 Could not set default machine to '%s'\n", cmd.Name)
-			return err
-		}
 		return trance.Query[Machine]().
 			Insert(&Machine{
 				Address: cmd.Address,
@@ -86,12 +90,15 @@ func (cmd *MachineAddCommand) Run() error {
 				Port:    cmd.Port,
 				User:    cmd.User,
 			}).
+			Then(func(_ sql.Result, _ *Machine) error {
+				fmt.Printf("✅ Added machine '%s'\n", cmd.Name)
+				return SetPreference(DefaultMachine, cmd.Name).Error
+			}).
 			OnError(func(err error) error {
 				fmt.Println("🚫 Could not add machine")
 				return err
 			}).
 			Then(func(_ sql.Result, _ *Machine) error {
-				fmt.Printf("✅ Added machine '%s'\n", cmd.Name)
 				fmt.Printf("✅ Set default machine to '%s'\n", cmd.Name)
 				return nil
 			}).
