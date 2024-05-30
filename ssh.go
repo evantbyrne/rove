@@ -76,18 +76,19 @@ func (conn *SshConnection) Run(command string, callback func(string) error) *Ssh
 	if conn.Error != nil {
 		return conn
 	}
-	var b bytes.Buffer
+	var bufferStdout bytes.Buffer
 	session, err := conn.Client.NewSession()
 	if err != nil {
 		conn.Error = fmt.Errorf("failed to create session for command '%s': %v", command, err)
 		return conn
 	}
 	defer session.Close()
-	session.Stdout = &b
+	session.Stderr = os.Stderr
+	session.Stdout = &bufferStdout
 	if err := session.Run(command); err != nil {
 		conn.Error = fmt.Errorf("failed to run command '%s': %v", command, err)
 		return conn
 	}
-	conn.Error = callback(b.String())
+	conn.Error = callback(bufferStdout.String())
 	return conn
 }
