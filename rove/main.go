@@ -25,7 +25,10 @@ var cli struct {
 	Service struct {
 		Logs rove.ServiceLogsCommand `cmd:""`
 		Run  rove.ServiceRunCommand  `cmd:""`
-	} `cmd:"" help:"Manage networks."`
+	} `cmd:"" help:"Manage services."`
+	Task struct {
+		Logs rove.TaskLogsCommand `cmd:""`
+	} `cmd:"" help:"Manage one-off tasks."`
 }
 
 func main() {
