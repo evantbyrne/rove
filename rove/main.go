@@ -23,7 +23,8 @@ var cli struct {
 	} `cmd:"" help:"Manage networks."`
 	Run     rove.RunCommand `cmd:"" help:"Run containers"`
 	Service struct {
-		Run rove.ServiceRunCommand `cmd:""`
+		Logs rove.ServiceLogsCommand `cmd:""`
+		Run  rove.ServiceRunCommand  `cmd:""`
 	} `cmd:"" help:"Manage networks."`
 }
 
