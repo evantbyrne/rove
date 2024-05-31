@@ -130,7 +130,7 @@ func (cmd *ServiceRunCommand) Run() error {
 					})
 					command.Args = append(command.Args, ShellArg{
 						Check: true,
-						Value: cmd.Name,
+						Value: shellescape.Quote(cmd.Name),
 					})
 					return nil
 				}).
