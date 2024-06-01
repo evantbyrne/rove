@@ -32,6 +32,7 @@ type ServiceRunCommand struct {
 	Network    string   `flag:"" name:"network" help:"Network name." default:""`
 	Prefix     string   `flag:"" name:"prefix" help:"Network prefix." default:"rove."`
 	Publish    []string `flag:"" name:"port" short:"p"`
+	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 }
 
 func (cmd *ServiceRunCommand) Run() error {
@@ -40,6 +41,11 @@ func (cmd *ServiceRunCommand) Run() error {
 			command := ShellCommand{
 				Name: "docker service create",
 				Flags: []ShellFlag{
+					{
+						Check: true,
+						Name:  "replicas",
+						Value: fmt.Sprintf("%d", cmd.Replicas),
+					},
 					{
 						Check: cmd.Network != "",
 						Name:  "network",
