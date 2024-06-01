@@ -29,6 +29,7 @@ var cli struct {
 		Run    rove.ServiceRunCommand    `cmd:""`
 	} `cmd:"" help:"Manage services."`
 	Task struct {
+		List rove.TaskListCommand `cmd:""`
 		Logs rove.TaskLogsCommand `cmd:""`
 	} `cmd:"" help:"Manage one-off tasks."`
 }
