@@ -11,6 +11,12 @@ import (
 
 type DockerServiceInspectJson struct {
 	Spec struct {
+		TaskTemplate struct {
+			ContainerSpec struct {
+				Args  []string `json:"Args"`
+				Image string   `json:"Image"`
+			} `json:"ContainerSpec"`
+		} `json:"TaskTemplate"`
 		EndpointSpec struct {
 			Ports []struct {
 				Protocol      string `json:"Protocol"`
@@ -19,6 +25,11 @@ type DockerServiceInspectJson struct {
 				PublishMode   string `json:"PublishMode"`
 			} `json:"Ports"`
 		} `json:"EndpointSpec"`
+		Mode struct {
+			Replicated struct {
+				Replicas int64 `json:"Replicas"`
+			} `json:"Replicated"`
+		} `json:"Mode"`
 	} `json:"Spec"`
 }
 
@@ -38,6 +49,16 @@ type ServiceRunCommand struct {
 func (cmd *ServiceRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
 		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+			old := &ServiceState{
+				Command: make([]string, 0),
+				Publish: make([]string, 0),
+			}
+			new := &ServiceState{
+				Command:  cmd.Command,
+				Image:    cmd.Image,
+				Publish:  cmd.Publish,
+				Replicas: fmt.Sprint(cmd.Replicas),
+			}
 			command := ShellCommand{
 				Name: "docker service create",
 				Flags: []ShellFlag{
@@ -94,14 +115,11 @@ func (cmd *ServiceRunCommand) Run() error {
 						fmt.Println("🚫 Could not parse docker service inspect JSON:\n", res)
 						return err
 					}
-					portsAdd := make([]string, 0)
 					portsExisting := make([]string, 0)
-					portsRemove := make([]string, 0)
 					for _, entry := range dockerInspect[0].Spec.EndpointSpec.Ports {
 						port := fmt.Sprintf("%d:%d", entry.TargetPort, entry.PublishedPort)
 						portsExisting = append(portsExisting, port)
 						if !slices.Contains(cmd.Publish, port) {
-							portsRemove = append(portsRemove, port)
 							command.Flags = append(command.Flags, ShellFlag{
 								Check: true,
 								Name:  "publish-rm",
@@ -112,7 +130,6 @@ func (cmd *ServiceRunCommand) Run() error {
 
 					for _, port := range cmd.Publish {
 						if !slices.Contains(portsExisting, port) {
-							portsAdd = append(portsAdd, port)
 							command.Flags = append(command.Flags, ShellFlag{
 								Check: true,
 								Name:  "publish-add",
@@ -120,8 +137,10 @@ func (cmd *ServiceRunCommand) Run() error {
 							})
 						}
 					}
-					fmt.Println("--- ports:", portsRemove)
-					fmt.Println("+++ ports:", portsAdd)
+					old.Command = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Args
+					old.Image = strings.Split(dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Image, "@")[0]
+					old.Publish = portsExisting
+					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)
 
 					command.Name = "docker service update"
 					command.Flags = append(command.Flags, ShellFlag{
@@ -142,14 +161,20 @@ func (cmd *ServiceRunCommand) Run() error {
 				}).
 				OnError(SkipReset).
 				Run(command.String(), func(res string) error {
+					diffText, diffStatus := new.Diff(old)
 					if command.Name == "docker service create" {
-						fmt.Printf("✅ Created service '%s'\n", cmd.Name)
+						fmt.Printf("\nRove created %s:\n\n", cmd.Name)
+						fmt.Printf(" + service %s:\n", cmd.Name)
 					} else {
-						fmt.Printf("✅ Updated service '%s'\n", cmd.Name)
+						if diffStatus == DiffSame {
+							fmt.Printf("\nRove deployed %s without changes:\n\n", cmd.Name)
+							fmt.Printf("   service %s:\n", cmd.Name)
+						} else {
+							fmt.Printf("\nRove updated %s:\n\n", cmd.Name)
+							fmt.Printf(" ~ service %s:\n", cmd.Name)
+						}
 					}
-					for _, p := range cmd.Publish {
-						fmt.Println("\tPublished", p)
-					}
+					fmt.Print(diffText, "\n\n")
 					return nil
 				}).
 				OnError(func(err error) error {
