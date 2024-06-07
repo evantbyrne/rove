@@ -1,8 +1,11 @@
 package rove
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 
@@ -39,6 +42,7 @@ type ServiceRunCommand struct {
 	Command []string `arg:"" name:"command" optional:"" passthrough:"" help:"Docker command."`
 
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
 	Network    string   `flag:"" name:"network" help:"Network name." default:""`
 	Prefix     string   `flag:"" name:"prefix" help:"Network prefix." default:"rove."`
@@ -75,7 +79,7 @@ func (cmd *ServiceRunCommand) Run() error {
 				},
 				Args: []ShellArg{},
 			}
-			return conn.
+			err := conn.
 				Run(fmt.Sprint("docker service ls --format json --filter label=rove --filter name=", cmd.Name), func(res string) error {
 					if lines := strings.Split(strings.ReplaceAll(res, "\r\n", "\n"), "\n"); len(lines) > 1 {
 						return nil
@@ -160,21 +164,47 @@ func (cmd *ServiceRunCommand) Run() error {
 					return nil
 				}).
 				OnError(SkipReset).
+				Error
+			if err != nil {
+				fmt.Println("🚫 Could not create deployment plan")
+				return err
+			}
+
+			diffText, diffStatus := new.Diff(old)
+			if command.Name == "docker service create" {
+				fmt.Printf("\nRove will create %s:\n\n", cmd.Name)
+				fmt.Printf(" + service %s:\n", cmd.Name)
+			} else {
+				if diffStatus == DiffSame {
+					fmt.Printf("\nRove will deploy %s without changes:\n\n", cmd.Name)
+					fmt.Printf("   service %s:\n", cmd.Name)
+				} else {
+					fmt.Printf("\nRove will update %s:\n\n", cmd.Name)
+					fmt.Printf(" ~ service %s:\n", cmd.Name)
+				}
+			}
+			fmt.Print(diffText, "\n\n")
+			if cmd.Force {
+				fmt.Println("Confirmations skipped.")
+			} else {
+				fmt.Println("Do you want Rove to run this deployment?")
+				fmt.Println("  Type 'yes' to approve, or anything else to deny.")
+				fmt.Print("  Enter a value: ")
+				line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+				if err != nil {
+					fmt.Println("🚫 Could not read from STDIN")
+					return err
+				}
+				if strings.ToLower(strings.TrimSpace(line)) != "yes" {
+					return errors.New("🚫 Deployment canceled because response did not match 'yes'")
+				}
+			}
+
+			fmt.Println("\nDeploying...")
+
+			return conn.
 				Run(command.String(), func(res string) error {
-					diffText, diffStatus := new.Diff(old)
-					if command.Name == "docker service create" {
-						fmt.Printf("\nRove created %s:\n\n", cmd.Name)
-						fmt.Printf(" + service %s:\n", cmd.Name)
-					} else {
-						if diffStatus == DiffSame {
-							fmt.Printf("\nRove deployed %s without changes:\n\n", cmd.Name)
-							fmt.Printf("   service %s:\n", cmd.Name)
-						} else {
-							fmt.Printf("\nRove updated %s:\n\n", cmd.Name)
-							fmt.Printf(" ~ service %s:\n", cmd.Name)
-						}
-					}
-					fmt.Print(diffText, "\n\n")
+					fmt.Printf("\nRove deployed %s.\n\n", cmd.Name)
 					return nil
 				}).
 				OnError(func(err error) error {
