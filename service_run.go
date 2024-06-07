@@ -204,7 +204,7 @@ func (cmd *ServiceRunCommand) Run() error {
 
 			return conn.
 				Run(command.String(), func(res string) error {
-					fmt.Printf("\nRove deployed %s.\n\n", cmd.Name)
+					fmt.Printf("\nRove deployed '%s'.\n\n", cmd.Name)
 					return nil
 				}).
 				OnError(func(err error) error {
