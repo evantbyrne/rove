@@ -12,10 +12,9 @@ type DockerNetworkLsJson struct {
 }
 
 type NetworkListCommand struct {
-	MachineName string `arg:"" name:"machine" help:"Name of machine."`
-
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Format     string `flag:"" name:"format" enum:"text,json" help:"Output format. Choices: \"text\", \"json\"." default:"text"`
+	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
 type NetworkListJson struct {
@@ -24,7 +23,7 @@ type NetworkListJson struct {
 
 func (cmd *NetworkListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.MachineName, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
 			return conn.
 				Run("docker network ls --format json --filter label=rove", func(res string) error {
 					output := make([]DockerNetworkLsJson, 0)
