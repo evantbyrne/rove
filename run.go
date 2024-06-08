@@ -14,8 +14,7 @@ type RunCommand struct {
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Follow     bool   `flag:"" name:"follow" short:"f" help:"Wait for container, attach stderr and stdout streams."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
-	Network    string `flag:"" name:"network" help:"Network name." default:""`
-	Prefix     string `flag:"" name:"prefix" help:"Network prefix." default:"rove."`
+	Network    string `flag:"" name:"network" help:"Network name." default:"rove"`
 }
 
 func (cmd *RunCommand) Run() error {
@@ -27,7 +26,7 @@ func (cmd *RunCommand) Run() error {
 					{
 						Check: cmd.Network != "",
 						Name:  "network",
-						Value: cmd.Prefix + cmd.Network,
+						Value: cmd.Network,
 					},
 					{
 						Check: !cmd.Follow,

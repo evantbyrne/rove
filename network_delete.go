@@ -2,6 +2,8 @@ package rove
 
 import (
 	"fmt"
+
+	"github.com/alessio/shellescape"
 )
 
 type NetworkDeleteCommand struct {
@@ -9,14 +11,13 @@ type NetworkDeleteCommand struct {
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
-	Prefix     string `flag:"" name:"prefix" help:"Network prefix." default:"rove."`
 }
 
 func (cmd *NetworkDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
 		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
 			return conn.
-				Run(fmt.Sprint("docker network rm ", cmd.Prefix, cmd.Name), func(res string) error {
+				Run(fmt.Sprint("docker network rm ", shellescape.Quote(cmd.Name)), func(res string) error {
 					fmt.Printf("✅ Deleted network '%s'\n", cmd.Name)
 					return nil
 				}).

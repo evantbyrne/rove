@@ -44,8 +44,7 @@ type ServiceRunCommand struct {
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
-	Network    string   `flag:"" name:"network" help:"Network name." default:""`
-	Prefix     string   `flag:"" name:"prefix" help:"Network prefix." default:"rove."`
+	Network    string   `flag:"" name:"network" help:"Network name." default:"rove"`
 	Publish    []string `flag:"" name:"port" short:"p"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 }
@@ -74,7 +73,7 @@ func (cmd *ServiceRunCommand) Run() error {
 					{
 						Check: cmd.Network != "",
 						Name:  "network",
-						Value: cmd.Prefix + cmd.Network,
+						Value: cmd.Network,
 					},
 				},
 				Args: []ShellArg{},
@@ -141,6 +140,7 @@ func (cmd *ServiceRunCommand) Run() error {
 							})
 						}
 					}
+					// TODO: Diff and update networks
 					old.Command = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Args
 					old.Image = strings.Split(dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Image, "@")[0]
 					old.Publish = portsExisting

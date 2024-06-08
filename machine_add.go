@@ -30,7 +30,6 @@ type MachineAddCommand struct {
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool   `flag:"" name:"force" help:"Skip confirmations."`
 	Port       int64  `flag:"" name:"port" help:"SSH port of remote machine." default:"22"`
-	Prefix     string `flag:"" name:"prefix" help:"Network prefix." default:"rove."`
 }
 
 func (cmd *MachineAddCommand) Run() error {
@@ -63,7 +62,7 @@ func (cmd *MachineAddCommand) Run() error {
 					}
 					return nil
 				}).
-				Run(fmt.Sprint("docker network ls --format json --filter label=rove --filter name=", cmd.Prefix, "default"), func(res string) error {
+				Run("docker network ls --format json --filter label=rove --filter name=rove", func(res string) error {
 					if lines := strings.Split(strings.ReplaceAll(res, "\r\n", "\n"), "\n"); len(lines) > 1 {
 						mustCreateNetwork = false
 					}
@@ -114,7 +113,7 @@ func (cmd *MachineAddCommand) Run() error {
 			}
 			if mustCreateNetwork {
 				err = conn.
-					Run(fmt.Sprint("docker network create --attachable --label rove ", cmd.Prefix, "default"), func(res string) error {
+					Run("docker network create --attachable --driver overlay --label rove --scope swarm rove", func(res string) error {
 						fmt.Println("~ Created 'default' network")
 						return nil
 					}).
