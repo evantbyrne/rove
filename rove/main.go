@@ -10,6 +10,7 @@ import (
 )
 
 var cli struct {
+	Logs    rove.LogsCommand `cmd:"" help:"View logs."`
 	Machine struct {
 		Add    rove.MachineAddCommand    `cmd:""`
 		Delete rove.MachineDeleteCommand `cmd:""`
@@ -25,12 +26,11 @@ var cli struct {
 	Service struct {
 		Delete rove.ServiceDeleteCommand `cmd:""`
 		List   rove.ServiceListCommand   `cmd:""`
-		Logs   rove.ServiceLogsCommand   `cmd:""`
 		Run    rove.ServiceRunCommand    `cmd:""`
 	} `cmd:"" help:"Manage services."`
 	Task struct {
 		List rove.TaskListCommand `cmd:""`
-		Logs rove.TaskLogsCommand `cmd:""`
+		Run  rove.TaskRunCommand  `cmd:""`
 	} `cmd:"" help:"Manage one-off tasks."`
 }
 

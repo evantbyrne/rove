@@ -6,7 +6,7 @@ import (
 	"github.com/alessio/shellescape"
 )
 
-type ServiceLogsCommand struct {
+type LogsCommand struct {
 	Name string `arg:"" name:"name" help:"Name of service."`
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
@@ -17,7 +17,7 @@ type ServiceLogsCommand struct {
 	Timestamps bool   `flag:"" name:"timestamps" short:"t" help:"Show timestamps."`
 }
 
-func (cmd *ServiceLogsCommand) Run() error {
+func (cmd *LogsCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
 		command := ShellCommand{
 			Name: "docker service logs",
@@ -59,7 +59,8 @@ func (cmd *ServiceLogsCommand) Run() error {
 			command.Name = fmt.Sprintf("timeout --verbose %s %s", cmd.Timeout, command.Name)
 		}
 		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
-			return conn.Run(command.String(), func(_ string) error {
+			return conn.Run(command.String(), func(res string) error {
+				fmt.Print(res)
 				return nil
 			}).Error
 		})

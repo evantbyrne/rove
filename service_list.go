@@ -45,7 +45,7 @@ func (cmd *ServiceListCommand) Run() error {
 				Services: make([]ServiceListEntryJson, 0),
 			}
 
-			if err := conn.Run("docker service ls --format json --filter label=rove", func(res string) error {
+			if err := conn.Run("docker service ls --format json --filter label=rove=service", func(res string) error {
 				for _, line := range strings.Split(strings.ReplaceAll(res, "\r\n", "\n"), "\n") {
 					if line != "" {
 						var dockerServiceLs DockerServiceLsJson

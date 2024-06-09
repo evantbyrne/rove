@@ -79,7 +79,7 @@ func (cmd *ServiceRunCommand) Run() error {
 				Args: []ShellArg{},
 			}
 			err := conn.
-				Run(fmt.Sprint("docker service ls --format json --filter label=rove --filter name=", cmd.Name), func(res string) error {
+				Run(fmt.Sprint("docker service ls --format json --filter label=rove=service --filter name=", cmd.Name), func(res string) error {
 					if lines := strings.Split(strings.ReplaceAll(res, "\r\n", "\n"), "\n"); len(lines) > 1 {
 						return nil
 					}
@@ -91,7 +91,7 @@ func (cmd *ServiceRunCommand) Run() error {
 					command.Flags = append(command.Flags, ShellFlag{
 						Check: true,
 						Name:  "label",
-						Value: "rove",
+						Value: "rove=service",
 					})
 					for _, p := range cmd.Publish {
 						command.Flags = append(command.Flags, ShellFlag{
