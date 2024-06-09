@@ -1,11 +1,8 @@
 package rove
 
 import (
-	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 
@@ -183,21 +180,9 @@ func (cmd *ServiceRunCommand) Run() error {
 					fmt.Printf(" ~ service %s:\n", cmd.Name)
 				}
 			}
-			fmt.Print(diffText, "\n\n")
-			if cmd.Force {
-				fmt.Println("Confirmations skipped.")
-			} else {
-				fmt.Println("Do you want Rove to run this deployment?")
-				fmt.Println("  Type 'yes' to approve, or anything else to deny.")
-				fmt.Print("  Enter a value: ")
-				line, err := bufio.NewReader(os.Stdin).ReadString('\n')
-				if err != nil {
-					fmt.Println("🚫 Could not read from STDIN")
-					return err
-				}
-				if strings.ToLower(strings.TrimSpace(line)) != "yes" {
-					return errors.New("🚫 Deployment canceled because response did not match 'yes'")
-				}
+			fmt.Println(diffText)
+			if err := confirmDeployment(cmd.Force); err != nil {
+				return err
 			}
 
 			fmt.Println("\nDeploying...")

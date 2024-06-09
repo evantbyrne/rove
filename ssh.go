@@ -1,12 +1,14 @@
 package rove
 
 import (
+	"bufio"
 	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/evantbyrne/trance"
 	"golang.org/x/crypto/ssh"
@@ -91,4 +93,23 @@ func (conn *SshConnection) Run(command string, callback func(string) error) *Ssh
 	}
 	conn.Error = callback(bufferStdout.String())
 	return conn
+}
+
+func confirmDeployment(force bool) error {
+	if force {
+		fmt.Println("\nConfirmations skipped.")
+	} else {
+		fmt.Println("\nDo you want Rove to run this deployment?")
+		fmt.Println("  Type 'yes' to approve, or anything else to deny.")
+		fmt.Print("  Enter a value: ")
+		line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil {
+			fmt.Println("🚫 Could not read from STDIN")
+			return err
+		}
+		if strings.ToLower(strings.TrimSpace(line)) != "yes" {
+			return errors.New("🚫 Deployment canceled because response did not match 'yes'")
+		}
+	}
+	return nil
 }
