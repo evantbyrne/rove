@@ -14,6 +14,7 @@ type TaskRunCommand struct {
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
+	Mounts     []string `flag:"" name:"mount" sep:"none"`
 	Network    string   `flag:"" name:"network" help:"Network name." default:"rove"`
 	Publish    []string `flag:"" name:"port" short:"p"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
@@ -29,6 +30,7 @@ func (cmd *TaskRunCommand) Run() error {
 			new := &ServiceState{
 				Command:  cmd.Command,
 				Image:    cmd.Image,
+				Mounts:   cmd.Mounts,
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
 			}
@@ -67,11 +69,18 @@ func (cmd *TaskRunCommand) Run() error {
 					},
 				},
 			}
-			for _, p := range cmd.Publish {
+			for _, mount := range cmd.Mounts {
 				command.Flags = append(command.Flags, ShellFlag{
-					Check: p != "",
+					Check: mount != "",
+					Name:  "mount",
+					Value: mount,
+				})
+			}
+			for _, port := range cmd.Publish {
+				command.Flags = append(command.Flags, ShellFlag{
+					Check: port != "",
 					Name:  "publish",
-					Value: p,
+					Value: port,
 				})
 			}
 
