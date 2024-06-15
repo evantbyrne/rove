@@ -45,8 +45,16 @@ func (cmd *MachineAddCommand) Run() error {
 		}
 		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn *SshConnection) error {
 			fmt.Printf("\nConnected to remote address '%s@%s:%d'.\n", cmd.User, cmd.Address, cmd.Port)
+			mustInstallDocker := true
 			mustEnableSwarm := true
 			err := conn.
+				Run("command -v docker", func(_ string) error {
+					mustInstallDocker = false
+					return nil
+				}).
+				OnError(func(error) error {
+					return ErrorSkip{}
+				}).
 				Run("docker info --format json", func(res string) error {
 					var dockerInfo DockerInfoJson
 					if err := json.Unmarshal([]byte(res), &dockerInfo); err != nil {
@@ -58,15 +66,35 @@ func (cmd *MachineAddCommand) Run() error {
 					}
 					return nil
 				}).
+				OnError(SkipReset).
 				Error
 			if err != nil {
 				return err
 			}
 
-			if mustEnableSwarm {
+			if mustInstallDocker || mustEnableSwarm {
 				fmt.Print("\nRove will make the following changes to remote machine:\n\n")
-				fmt.Println(" ~ Enable swarm")
+				if mustInstallDocker {
+					fmt.Println(" ~ Install docker")
+				}
+				if mustEnableSwarm {
+					fmt.Println(" ~ Enable swarm")
+				}
 				if err := confirmDeployment(cmd.Force); err != nil {
+					return err
+				}
+				fmt.Println()
+			}
+
+			if mustInstallDocker {
+				// Via: https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script
+				err = conn.
+					Run("curl -fsSL https://get.docker.com | sh", func(_ string) error {
+						fmt.Println("~ Installed docker")
+						return nil
+					}).
+					Error
+				if err != nil {
 					return err
 				}
 			}
