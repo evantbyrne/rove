@@ -19,6 +19,9 @@ type DockerServiceInspectJson struct {
 					SecretName string `json:"SecretName"`
 				} `json:"Secrets"`
 			} `json:"ContainerSpec"`
+			Networks []struct {
+				Target string `json:"Target"`
+			} `json:"Networks"`
 		} `json:"TaskTemplate"`
 		EndpointSpec struct {
 			Ports []struct {
@@ -44,7 +47,7 @@ type ServiceRunCommand struct {
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
-	Network    string   `flag:"" name:"network" help:"Network name." default:"rove"`
+	Networks   []string `flag:"" name:"network" help:"Network name. If not specified, defaults to 'rove'."`
 	Publish    []string `flag:"" name:"port" short:"p"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 	Secrets    []string `flag:"" name:"secret"`
@@ -61,6 +64,7 @@ func (cmd *ServiceRunCommand) Run() error {
 			new := &ServiceState{
 				Command:  cmd.Command,
 				Image:    cmd.Image,
+				Networks: cmd.Networks,
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
 				Secrets:  cmd.Secrets,
@@ -91,11 +95,21 @@ func (cmd *ServiceRunCommand) Run() error {
 						Name:  "name",
 						Value: cmd.Name,
 					})
-					command.Flags = append(command.Flags, ShellFlag{
-						Check: cmd.Network != "",
-						Name:  "network",
-						Value: cmd.Network,
-					})
+					if len(cmd.Networks) == 0 {
+						command.Flags = append(command.Flags, ShellFlag{
+							Check: true,
+							Name:  "network",
+							Value: "rove",
+						})
+					} else {
+						for _, network := range cmd.Networks {
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: network != "",
+								Name:  "network",
+								Value: network,
+							})
+						}
+					}
 					for _, p := range cmd.Publish {
 						command.Flags = append(command.Flags, ShellFlag{
 							Check: p != "",
@@ -127,6 +141,81 @@ func (cmd *ServiceRunCommand) Run() error {
 					if err := json.Unmarshal([]byte(res), &dockerInspect); err != nil {
 						fmt.Println("🚫 Could not parse docker service inspect JSON:\n", res)
 						return err
+					}
+
+					// Networks
+					defaultNetwork := false
+					networksExisting := make([]string, 0)
+					networksExistingIds := make([]string, 0)
+					for _, network := range dockerInspect[0].Spec.TaskTemplate.Networks {
+						networksExistingIds = append(networksExistingIds, network.Target)
+					}
+					if len(networksExistingIds) > 0 {
+						commandNetworks := ShellCommand{
+							Name: "docker network ls --format json --no-trunc",
+						}
+						for _, networkId := range networksExistingIds {
+							commandNetworks.Flags = append(commandNetworks.Flags, ShellFlag{
+								Check: networkId != "",
+								Name:  "filter",
+								Value: shellescape.Quote("id=" + networkId),
+							})
+						}
+						errNetwork := conn.
+							Run(commandNetworks.String(), func(resNetworks string) error {
+								for _, line := range strings.Split(strings.ReplaceAll(resNetworks, "\r\n", "\n"), "\n") {
+									if line != "" {
+										var dockerNetworkLs DockerNetworkLsJson
+										if err := json.Unmarshal([]byte(line), &dockerNetworkLs); err != nil {
+											fmt.Println("🚫 Could not parse docker network ls JSON:\n", line)
+											return err
+										}
+										if dockerNetworkLs.Name == "rove" {
+											defaultNetwork = true
+										} else {
+											networksExisting = append(networksExisting, dockerNetworkLs.Name)
+										}
+									}
+								}
+								return nil
+							}).
+							Error
+						if errNetwork != nil {
+							return errNetwork
+						}
+						if len(cmd.Networks) > 0 && defaultNetwork {
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: true,
+								Name:  "network-rm",
+								Value: "rove",
+							})
+						}
+						for _, network := range networksExisting {
+							if !slices.Contains(cmd.Networks, network) {
+								command.Flags = append(command.Flags, ShellFlag{
+									Check: network != "",
+									Name:  "network-rm",
+									Value: network,
+								})
+							}
+						}
+					}
+					if len(cmd.Networks) == 0 {
+						command.Flags = append(command.Flags, ShellFlag{
+							Check: true,
+							Name:  "network-add",
+							Value: "rove",
+						})
+					} else {
+						for _, network := range cmd.Networks {
+							if !slices.Contains(networksExisting, network) {
+								command.Flags = append(command.Flags, ShellFlag{
+									Check: network != "",
+									Name:  "network-add",
+									Value: network,
+								})
+							}
+						}
 					}
 
 					// Ports
@@ -174,9 +263,9 @@ func (cmd *ServiceRunCommand) Run() error {
 						}
 					}
 
-					// TODO: Diff and update networks
 					old.Command = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Args
 					old.Image = strings.Split(dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Image, "@")[0]
+					old.Networks = networksExisting
 					old.Publish = portsExisting
 					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)
 					old.Secrets = secretsExisting
