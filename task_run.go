@@ -15,7 +15,7 @@ type TaskRunCommand struct {
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
 	Mounts     []string `flag:"" name:"mount" sep:"none"`
-	Network    string   `flag:"" name:"network" help:"Network name." default:"rove"`
+	Networks   []string `flag:"" name:"network" help:"Network name."`
 	Publish    []string `flag:"" name:"port" short:"p"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 	Secrets    []string `flag:"" name:"secret"`
@@ -24,15 +24,12 @@ type TaskRunCommand struct {
 func (cmd *TaskRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
 		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
-			old := &ServiceState{
-				Command: make([]string, 0),
-				Publish: make([]string, 0),
-				Secrets: make([]string, 0),
-			}
+			old := &ServiceState{}
 			new := &ServiceState{
 				Command:  cmd.Command,
 				Image:    cmd.Image,
 				Mounts:   cmd.Mounts,
+				Networks: cmd.Networks,
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
 				Secrets:  cmd.Secrets,
@@ -44,11 +41,6 @@ func (cmd *TaskRunCommand) Run() error {
 						Check: true,
 						Name:  "label",
 						Value: "rove=task",
-					},
-					{
-						Check: cmd.Network != "",
-						Name:  "network",
-						Value: cmd.Network,
 					},
 					{
 						Check: true,
@@ -77,6 +69,13 @@ func (cmd *TaskRunCommand) Run() error {
 					Check: mount != "",
 					Name:  "mount",
 					Value: mount,
+				})
+			}
+			for _, network := range cmd.Networks {
+				command.Flags = append(command.Flags, ShellFlag{
+					Check: network != "",
+					Name:  "network",
+					Value: network,
 				})
 			}
 			for _, port := range cmd.Publish {
