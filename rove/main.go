@@ -25,6 +25,7 @@ var cli struct {
 	Secret struct {
 		Create rove.SecretCreateCommand `cmd:""`
 		Delete rove.SecretDeleteCommand `cmd:""`
+		List   rove.SecretListCommand   `cmd:""`
 	} `cmd:"" help:"Manage secrets."`
 	Service struct {
 		Delete rove.ServiceDeleteCommand `cmd:""`
