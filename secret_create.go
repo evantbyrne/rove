@@ -50,7 +50,7 @@ func (cmd *SecretCreateCommand) Run() error {
 			fh.Close()
 
 			err = conn.
-				Run(fmt.Sprintf("docker secret create %s %s", shellescape.Quote(cmd.Name), fileName), func(res string) error {
+				Run(fmt.Sprintf("docker secret create --label 'rove=secret' %s %s", shellescape.Quote(cmd.Name), fileName), func(res string) error {
 					id := strings.TrimSpace(res)
 					if cmd.Json {
 						output := SecretCreateJson{
