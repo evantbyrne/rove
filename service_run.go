@@ -47,7 +47,7 @@ type ServiceRunCommand struct {
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
-	Networks   []string `flag:"" name:"network" help:"Network name. If not specified, defaults to 'rove'."`
+	Networks   []string `flag:"" name:"network" help:"Network name."`
 	Publish    []string `flag:"" name:"port" short:"p"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 	Secrets    []string `flag:"" name:"secret"`
@@ -56,11 +56,7 @@ type ServiceRunCommand struct {
 func (cmd *ServiceRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
 		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
-			old := &ServiceState{
-				Command: make([]string, 0),
-				Publish: make([]string, 0),
-				Secrets: make([]string, 0),
-			}
+			old := &ServiceState{}
 			new := &ServiceState{
 				Command:  cmd.Command,
 				Image:    cmd.Image,
@@ -78,7 +74,6 @@ func (cmd *ServiceRunCommand) Run() error {
 						Value: fmt.Sprintf("%d", cmd.Replicas),
 					},
 				},
-				Args: []ShellArg{},
 			}
 			err := conn.
 				Run(fmt.Sprint("docker service ls --format json --filter label=rove=service --filter name=", cmd.Name), func(res string) error {
@@ -95,20 +90,12 @@ func (cmd *ServiceRunCommand) Run() error {
 						Name:  "name",
 						Value: cmd.Name,
 					})
-					if len(cmd.Networks) == 0 {
+					for _, network := range cmd.Networks {
 						command.Flags = append(command.Flags, ShellFlag{
-							Check: true,
+							Check: network != "",
 							Name:  "network",
-							Value: "rove",
+							Value: network,
 						})
-					} else {
-						for _, network := range cmd.Networks {
-							command.Flags = append(command.Flags, ShellFlag{
-								Check: network != "",
-								Name:  "network",
-								Value: network,
-							})
-						}
 					}
 					for _, p := range cmd.Publish {
 						command.Flags = append(command.Flags, ShellFlag{
@@ -144,7 +131,6 @@ func (cmd *ServiceRunCommand) Run() error {
 					}
 
 					// Networks
-					defaultNetwork := false
 					networksExisting := make([]string, 0)
 					networksExistingIds := make([]string, 0)
 					for _, network := range dockerInspect[0].Spec.TaskTemplate.Networks {
@@ -170,11 +156,7 @@ func (cmd *ServiceRunCommand) Run() error {
 											fmt.Println("🚫 Could not parse docker network ls JSON:\n", line)
 											return err
 										}
-										if dockerNetworkLs.Name == "rove" {
-											defaultNetwork = true
-										} else {
-											networksExisting = append(networksExisting, dockerNetworkLs.Name)
-										}
+										networksExisting = append(networksExisting, dockerNetworkLs.Name)
 									}
 								}
 								return nil
@@ -182,13 +164,6 @@ func (cmd *ServiceRunCommand) Run() error {
 							Error
 						if errNetwork != nil {
 							return errNetwork
-						}
-						if len(cmd.Networks) > 0 && defaultNetwork {
-							command.Flags = append(command.Flags, ShellFlag{
-								Check: true,
-								Name:  "network-rm",
-								Value: "rove",
-							})
 						}
 						for _, network := range networksExisting {
 							if !slices.Contains(cmd.Networks, network) {
@@ -200,21 +175,13 @@ func (cmd *ServiceRunCommand) Run() error {
 							}
 						}
 					}
-					if len(cmd.Networks) == 0 {
-						command.Flags = append(command.Flags, ShellFlag{
-							Check: true,
-							Name:  "network-add",
-							Value: "rove",
-						})
-					} else {
-						for _, network := range cmd.Networks {
-							if !slices.Contains(networksExisting, network) {
-								command.Flags = append(command.Flags, ShellFlag{
-									Check: network != "",
-									Name:  "network-add",
-									Value: network,
-								})
-							}
+					for _, network := range cmd.Networks {
+						if !slices.Contains(networksExisting, network) {
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: network != "",
+								Name:  "network-add",
+								Value: network,
+							})
 						}
 					}
 

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/evantbyrne/trance"
 )
@@ -47,7 +46,6 @@ func (cmd *MachineAddCommand) Run() error {
 		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn *SshConnection) error {
 			fmt.Printf("\nConnected to remote address '%s@%s:%d'.\n", cmd.User, cmd.Address, cmd.Port)
 			mustEnableSwarm := true
-			mustCreateNetwork := true
 			err := conn.
 				Run("docker info --format json", func(res string) error {
 					var dockerInfo DockerInfoJson
@@ -60,25 +58,14 @@ func (cmd *MachineAddCommand) Run() error {
 					}
 					return nil
 				}).
-				Run("docker network ls --format json --filter label=rove --filter name=rove", func(res string) error {
-					if lines := strings.Split(strings.ReplaceAll(res, "\r\n", "\n"), "\n"); len(lines) > 1 {
-						mustCreateNetwork = false
-					}
-					return nil
-				}).
 				Error
 			if err != nil {
 				return err
 			}
 
-			if mustEnableSwarm || mustCreateNetwork {
+			if mustEnableSwarm {
 				fmt.Print("\nRove will make the following changes to remote machine:\n\n")
-				if mustEnableSwarm {
-					fmt.Println(" ~ Enable swarm")
-				}
-				if mustCreateNetwork {
-					fmt.Println(" ~ Create 'default' network")
-				}
+				fmt.Println(" ~ Enable swarm")
 				if err := confirmDeployment(cmd.Force); err != nil {
 					return err
 				}
@@ -90,18 +77,6 @@ func (cmd *MachineAddCommand) Run() error {
 						fmt.Println("~ Enabled swarm")
 						return nil
 					}).
-					Error
-				if err != nil {
-					return err
-				}
-			}
-			if mustCreateNetwork {
-				err = conn.
-					Run("docker network create --attachable --driver overlay --label rove --scope swarm rove", func(res string) error {
-						fmt.Println("~ Created 'default' network")
-						return nil
-					}).
-					OnError(SkipReset).
 					Error
 				if err != nil {
 					return err
