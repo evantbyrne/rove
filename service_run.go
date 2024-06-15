@@ -13,8 +13,11 @@ type DockerServiceInspectJson struct {
 	Spec struct {
 		TaskTemplate struct {
 			ContainerSpec struct {
-				Args  []string `json:"Args"`
-				Image string   `json:"Image"`
+				Args    []string `json:"Args"`
+				Image   string   `json:"Image"`
+				Secrets []struct {
+					SecretName string `json:"SecretName"`
+				} `json:"Secrets"`
 			} `json:"ContainerSpec"`
 		} `json:"TaskTemplate"`
 		EndpointSpec struct {
@@ -44,6 +47,7 @@ type ServiceRunCommand struct {
 	Network    string   `flag:"" name:"network" help:"Network name." default:"rove"`
 	Publish    []string `flag:"" name:"port" short:"p"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
+	Secrets    []string `flag:"" name:"secret"`
 }
 
 func (cmd *ServiceRunCommand) Run() error {
@@ -52,12 +56,14 @@ func (cmd *ServiceRunCommand) Run() error {
 			old := &ServiceState{
 				Command: make([]string, 0),
 				Publish: make([]string, 0),
+				Secrets: make([]string, 0),
 			}
 			new := &ServiceState{
 				Command:  cmd.Command,
 				Image:    cmd.Image,
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
+				Secrets:  cmd.Secrets,
 			}
 			command := ShellCommand{
 				Name: "docker service create",
@@ -66,11 +72,6 @@ func (cmd *ServiceRunCommand) Run() error {
 						Check: true,
 						Name:  "replicas",
 						Value: fmt.Sprintf("%d", cmd.Replicas),
-					},
-					{
-						Check: cmd.Network != "",
-						Name:  "network",
-						Value: cmd.Network,
 					},
 				},
 				Args: []ShellArg{},
@@ -82,19 +83,31 @@ func (cmd *ServiceRunCommand) Run() error {
 					}
 					command.Flags = append(command.Flags, ShellFlag{
 						Check: true,
+						Name:  "label",
+						Value: "rove=service",
+					})
+					command.Flags = append(command.Flags, ShellFlag{
+						Check: true,
 						Name:  "name",
 						Value: cmd.Name,
 					})
 					command.Flags = append(command.Flags, ShellFlag{
-						Check: true,
-						Name:  "label",
-						Value: "rove=service",
+						Check: cmd.Network != "",
+						Name:  "network",
+						Value: cmd.Network,
 					})
 					for _, p := range cmd.Publish {
 						command.Flags = append(command.Flags, ShellFlag{
 							Check: p != "",
 							Name:  "publish",
 							Value: p,
+						})
+					}
+					for _, secret := range cmd.Secrets {
+						command.Flags = append(command.Flags, ShellFlag{
+							Check: secret != "",
+							Name:  "secret",
+							Value: secret,
 						})
 					}
 					command.Args = append(command.Args,
@@ -115,6 +128,8 @@ func (cmd *ServiceRunCommand) Run() error {
 						fmt.Println("🚫 Could not parse docker service inspect JSON:\n", res)
 						return err
 					}
+
+					// Ports
 					portsExisting := make([]string, 0)
 					for _, entry := range dockerInspect[0].Spec.EndpointSpec.Ports {
 						port := fmt.Sprintf("%d:%d", entry.TargetPort, entry.PublishedPort)
@@ -127,7 +142,6 @@ func (cmd *ServiceRunCommand) Run() error {
 							})
 						}
 					}
-
 					for _, port := range cmd.Publish {
 						if !slices.Contains(portsExisting, port) {
 							command.Flags = append(command.Flags, ShellFlag{
@@ -137,11 +151,35 @@ func (cmd *ServiceRunCommand) Run() error {
 							})
 						}
 					}
+
+					// Secrets
+					secretsExisting := make([]string, 0)
+					for _, secret := range dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Secrets {
+						secretsExisting = append(secretsExisting, secret.SecretName)
+						if !slices.Contains(cmd.Secrets, secret.SecretName) {
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: secret.SecretName != "",
+								Name:  "secret-rm",
+								Value: secret.SecretName,
+							})
+						}
+					}
+					for _, secret := range cmd.Secrets {
+						if !slices.Contains(secretsExisting, secret) {
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: secret != "",
+								Name:  "secret-add",
+								Value: secret,
+							})
+						}
+					}
+
 					// TODO: Diff and update networks
 					old.Command = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Args
 					old.Image = strings.Split(dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Image, "@")[0]
 					old.Publish = portsExisting
 					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)
+					old.Secrets = secretsExisting
 
 					command.Name = "docker service update"
 					command.Flags = append(command.Flags, ShellFlag{

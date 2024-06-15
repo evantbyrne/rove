@@ -18,6 +18,7 @@ type TaskRunCommand struct {
 	Network    string   `flag:"" name:"network" help:"Network name." default:"rove"`
 	Publish    []string `flag:"" name:"port" short:"p"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
+	Secrets    []string `flag:"" name:"secret"`
 }
 
 func (cmd *TaskRunCommand) Run() error {
@@ -26,6 +27,7 @@ func (cmd *TaskRunCommand) Run() error {
 			old := &ServiceState{
 				Command: make([]string, 0),
 				Publish: make([]string, 0),
+				Secrets: make([]string, 0),
 			}
 			new := &ServiceState{
 				Command:  cmd.Command,
@@ -33,6 +35,7 @@ func (cmd *TaskRunCommand) Run() error {
 				Mounts:   cmd.Mounts,
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
+				Secrets:  cmd.Secrets,
 			}
 			command := ShellCommand{
 				Name: "docker service create --detach --no-healthcheck --quiet",
@@ -81,6 +84,13 @@ func (cmd *TaskRunCommand) Run() error {
 					Check: port != "",
 					Name:  "publish",
 					Value: port,
+				})
+			}
+			for _, secret := range cmd.Secrets {
+				command.Flags = append(command.Flags, ShellFlag{
+					Check: secret != "",
+					Name:  "secret",
+					Value: secret,
 				})
 			}
 
