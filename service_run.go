@@ -15,6 +15,7 @@ type DockerServiceInspectJson struct {
 			ContainerSpec struct {
 				Args    []string `json:"Args"`
 				Image   string   `json:"Image"`
+				Init    bool     `json:"Init"`
 				Secrets []struct {
 					SecretName string `json:"SecretName"`
 				} `json:"Secrets"`
@@ -46,6 +47,7 @@ type ServiceRunCommand struct {
 
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
+	Init       bool     `flag:"" name:"init"`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
 	Networks   []string `flag:"" name:"network" help:"Network name."`
 	Publish    []string `flag:"" name:"publish" short:"p" sep:"none"`
@@ -60,6 +62,7 @@ func (cmd *ServiceRunCommand) Run() error {
 			new := &ServiceState{
 				Command:  cmd.Command,
 				Image:    cmd.Image,
+				Init:     cmd.Init,
 				Networks: cmd.Networks,
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
@@ -68,6 +71,10 @@ func (cmd *ServiceRunCommand) Run() error {
 			command := ShellCommand{
 				Name: "docker service create",
 				Flags: []ShellFlag{
+					{
+						Check: cmd.Init,
+						Name:  "init",
+					},
 					{
 						Check: true,
 						Name:  "replicas",
@@ -129,6 +136,8 @@ func (cmd *ServiceRunCommand) Run() error {
 						fmt.Println("🚫 Could not parse docker service inspect JSON:\n", res)
 						return err
 					}
+
+					// TODO: Mounts
 
 					// Networks
 					networksExisting := make([]string, 0)
@@ -232,6 +241,10 @@ func (cmd *ServiceRunCommand) Run() error {
 
 					old.Command = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Args
 					old.Image = strings.Split(dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Image, "@")[0]
+					old.Init = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Init
+					if old.Init {
+						new.Init = true
+					}
 					old.Networks = networksExisting
 					old.Publish = portsExisting
 					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)

@@ -28,6 +28,31 @@ const (
 	DiffUpdate DiffStatus = "DiffUpdate"
 )
 
+func diffBool(lines []DiffLine, status DiffStatus, name string, old bool, new bool) ([]DiffLine, DiffStatus) {
+	if new {
+		if !old {
+			lines = append(lines, DiffLine{Left: name, Right: "true", Status: DiffCreate})
+			if status == DiffSame {
+				status = DiffCreate
+			} else if status == DiffDelete {
+				status = DiffUpdate
+			}
+		} else {
+			lines = append(lines, DiffLine{Left: name, Right: "true", Status: DiffSame})
+		}
+	} else {
+		if old {
+			lines = append(lines, DiffLine{Left: name, Right: "true", Status: DiffDelete})
+			if status == DiffSame {
+				status = DiffDelete
+			} else if status == DiffCreate {
+				status = DiffUpdate
+			}
+		}
+	}
+	return lines, status
+}
+
 func diffSlices(lines []DiffLine, status DiffStatus, name string, old []string, new []string) ([]DiffLine, DiffStatus) {
 	if slices.Equal(old, new) {
 		if len(new) > 0 {

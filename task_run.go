@@ -13,6 +13,7 @@ type TaskRunCommand struct {
 
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
+	Init       bool     `flag:"" name:"init"`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
 	Mounts     []string `flag:"" name:"mount" sep:"none"`
 	Networks   []string `flag:"" name:"network" help:"Network name."`
@@ -28,6 +29,7 @@ func (cmd *TaskRunCommand) Run() error {
 			new := &ServiceState{
 				Command:  cmd.Command,
 				Image:    cmd.Image,
+				Init:     cmd.Init,
 				Mounts:   cmd.Mounts,
 				Networks: cmd.Networks,
 				Publish:  cmd.Publish,
@@ -41,6 +43,10 @@ func (cmd *TaskRunCommand) Run() error {
 						Check: true,
 						Name:  "label",
 						Value: "rove=task",
+					},
+					{
+						Check: cmd.Init,
+						Name:  "init",
 					},
 					{
 						Check: true,

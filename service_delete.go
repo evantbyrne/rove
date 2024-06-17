@@ -32,11 +32,15 @@ func (cmd *ServiceDeleteCommand) Run() error {
 					}
 					old.Command = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Args
 					old.Image = strings.Split(dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Image, "@")[0]
+					old.Init = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Init
 					for _, entry := range dockerInspect[0].Spec.EndpointSpec.Ports {
 						port := fmt.Sprintf("%d:%d", entry.TargetPort, entry.PublishedPort)
 						old.Publish = append(old.Publish, port)
 					}
 					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)
+					for _, secret := range dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Secrets {
+						old.Secrets = append(old.Secrets, secret.SecretName)
+					}
 					return nil
 				}).
 				Error
