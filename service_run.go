@@ -48,9 +48,9 @@ type ServiceRunCommand struct {
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
 	Networks   []string `flag:"" name:"network" help:"Network name."`
-	Publish    []string `flag:"" name:"port" short:"p"`
+	Publish    []string `flag:"" name:"publish" short:"p" sep:"none"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
-	Secrets    []string `flag:"" name:"secret"`
+	Secrets    []string `flag:"" name:"secret" sep:"none"`
 }
 
 func (cmd *ServiceRunCommand) Run() error {

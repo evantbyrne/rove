@@ -16,9 +16,9 @@ type TaskRunCommand struct {
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
 	Mounts     []string `flag:"" name:"mount" sep:"none"`
 	Networks   []string `flag:"" name:"network" help:"Network name."`
-	Publish    []string `flag:"" name:"port" short:"p"`
+	Publish    []string `flag:"" name:"publish" short:"p" sep:"none"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
-	Secrets    []string `flag:"" name:"secret"`
+	Secrets    []string `flag:"" name:"secret" sep:"none"`
 }
 
 func (cmd *TaskRunCommand) Run() error {
