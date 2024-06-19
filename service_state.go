@@ -11,6 +11,7 @@ type ServiceState struct {
 	Publish  []string
 	Replicas string
 	Secrets  []string
+	WorkDir  string
 }
 
 func (new *ServiceState) Diff(old *ServiceState) (string, DiffStatus) {
@@ -27,6 +28,7 @@ func (new *ServiceState) Diff(old *ServiceState) (string, DiffStatus) {
 	lines, status = diffSlices(lines, status, "publish", old.Publish, new.Publish)
 	lines, status = diffString(lines, status, "replicas", old.Replicas, new.Replicas)
 	lines, status = diffSlices(lines, status, "secret", old.Secrets, new.Secrets)
+	lines, status = diffString(lines, status, "workdir", old.WorkDir, new.WorkDir)
 
 	for _, line := range lines {
 		if len(line.Left) > maxLeft {

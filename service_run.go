@@ -14,6 +14,7 @@ type DockerServiceInspectJson struct {
 		TaskTemplate struct {
 			ContainerSpec struct {
 				Args    []string `json:"Args"`
+				Dir     string   `json:"Dir"`
 				Image   string   `json:"Image"`
 				Init    bool     `json:"Init"`
 				Secrets []struct {
@@ -53,6 +54,7 @@ type ServiceRunCommand struct {
 	Publish    []string `flag:"" name:"publish" short:"p" sep:"none"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 	Secrets    []string `flag:"" name:"secret" sep:"none"`
+	WorkDir    string   `flag:"" name:"workdir" short:"w"`
 }
 
 func (cmd *ServiceRunCommand) Run() error {
@@ -67,6 +69,7 @@ func (cmd *ServiceRunCommand) Run() error {
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
 				Secrets:  cmd.Secrets,
+				WorkDir:  cmd.WorkDir,
 			}
 			command := ShellCommand{
 				Name: "docker service create",
@@ -79,6 +82,12 @@ func (cmd *ServiceRunCommand) Run() error {
 						Check: true,
 						Name:  "replicas",
 						Value: fmt.Sprintf("%d", cmd.Replicas),
+					},
+					{
+						AllowEmpty: true,
+						Check:      true,
+						Name:       "workdir",
+						Value:      cmd.WorkDir,
 					},
 				},
 			}
@@ -249,6 +258,7 @@ func (cmd *ServiceRunCommand) Run() error {
 					old.Publish = portsExisting
 					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)
 					old.Secrets = secretsExisting
+					old.WorkDir = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Dir
 
 					command.Name = "docker service update"
 					command.Flags = append(command.Flags, ShellFlag{

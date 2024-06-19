@@ -41,9 +41,10 @@ func (cmd ShellCommand) String() string {
 }
 
 type ShellFlag struct {
-	Check bool
-	Name  string
-	Value string
+	AllowEmpty bool
+	Check      bool
+	Name       string
+	Value      string
 }
 
 func (flag ShellFlag) String() string {
@@ -51,6 +52,9 @@ func (flag ShellFlag) String() string {
 		return ""
 	}
 	if flag.Value == "" {
+		if flag.AllowEmpty {
+			return fmt.Sprintf("--%s ''", flag.Name)
+		}
 		return fmt.Sprint("--", flag.Name)
 	}
 	return fmt.Sprintf("--%s %s", flag.Name, shellescape.Quote(flag.Value))

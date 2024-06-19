@@ -20,6 +20,7 @@ type TaskRunCommand struct {
 	Publish    []string `flag:"" name:"publish" short:"p" sep:"none"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 	Secrets    []string `flag:"" name:"secret" sep:"none"`
+	WorkDir    string   `flag:"" name:"workdir" short:"w"`
 }
 
 func (cmd *TaskRunCommand) Run() error {
@@ -35,6 +36,7 @@ func (cmd *TaskRunCommand) Run() error {
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
 				Secrets:  cmd.Secrets,
+				WorkDir:  cmd.WorkDir,
 			}
 			command := ShellCommand{
 				Name: "docker service create --detach --no-healthcheck --quiet",
@@ -57,6 +59,12 @@ func (cmd *TaskRunCommand) Run() error {
 						Check: true,
 						Name:  "restart-condition",
 						Value: "none",
+					},
+					{
+						AllowEmpty: true,
+						Check:      true,
+						Name:       "workdir",
+						Value:      cmd.WorkDir,
 					},
 				},
 				Args: []ShellArg{
