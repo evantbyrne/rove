@@ -31,6 +31,7 @@ func (cmd *ServiceDeleteCommand) Run() error {
 						return err
 					}
 					old.Command = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Args
+					old.Env = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Env
 					old.Image = strings.Split(dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Image, "@")[0]
 					old.Init = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Init
 					for _, entry := range dockerInspect[0].Spec.EndpointSpec.Ports {

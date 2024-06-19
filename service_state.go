@@ -4,6 +4,7 @@ import "strings"
 
 type ServiceState struct {
 	Command  []string
+	Env      []string
 	Image    string
 	Init     bool
 	Mounts   []string
@@ -22,6 +23,7 @@ func (new *ServiceState) Diff(old *ServiceState) (string, DiffStatus) {
 	status := DiffSame
 
 	lines, status = diffSlices(lines, status, "command", old.Command, new.Command)
+	lines, status = diffSlices(lines, status, "env", old.Env, new.Env)
 	lines, status = diffString(lines, status, "image", old.Image, new.Image)
 	lines, status = diffBool(lines, status, "init", old.Init, new.Init)
 	lines, status = diffSlices(lines, status, "mounts", old.Mounts, new.Mounts)

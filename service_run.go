@@ -15,6 +15,7 @@ type DockerServiceInspectJson struct {
 			ContainerSpec struct {
 				Args    []string `json:"Args"`
 				Dir     string   `json:"Dir"`
+				Env     []string `json:"Env"`
 				Image   string   `json:"Image"`
 				Init    bool     `json:"Init"`
 				Secrets []struct {
@@ -48,6 +49,7 @@ type ServiceRunCommand struct {
 	Command []string `arg:"" name:"command" optional:"" passthrough:"" help:"Docker command."`
 
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Env        []string `flag:"" name:"env" short:"e" sep:"none"`
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Init       bool     `flag:"" name:"init"`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
@@ -65,6 +67,7 @@ func (cmd *ServiceRunCommand) Run() error {
 			old := &ServiceState{}
 			new := &ServiceState{
 				Command:  cmd.Command,
+				Env:      cmd.Env,
 				Image:    cmd.Image,
 				Init:     cmd.Init,
 				Networks: cmd.Networks,
@@ -115,6 +118,13 @@ func (cmd *ServiceRunCommand) Run() error {
 						Name:  "name",
 						Value: cmd.Name,
 					})
+					for _, env := range cmd.Env {
+						command.Flags = append(command.Flags, ShellFlag{
+							Check: env != "",
+							Name:  "env",
+							Value: env,
+						})
+					}
 					for _, network := range cmd.Networks {
 						command.Flags = append(command.Flags, ShellFlag{
 							Check: network != "",
@@ -153,6 +163,28 @@ func (cmd *ServiceRunCommand) Run() error {
 					if err := json.Unmarshal([]byte(res), &dockerInspect); err != nil {
 						fmt.Println("🚫 Could not parse docker service inspect JSON:\n", res)
 						return err
+					}
+
+					// Environment variables
+					old.Env = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Env
+					for _, env := range old.Env {
+						if !slices.Contains(cmd.Env, env) {
+							envName := strings.Split(env, "=")[0]
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: envName != "",
+								Name:  "env-rm",
+								Value: envName,
+							})
+						}
+					}
+					for _, env := range new.Env {
+						if !slices.Contains(old.Env, env) {
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: env != "",
+								Name:  "env-add",
+								Value: env,
+							})
+						}
 					}
 
 					// TODO: Mounts

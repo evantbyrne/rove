@@ -12,6 +12,7 @@ type TaskRunCommand struct {
 	Command []string `arg:"" name:"command" optional:"" passthrough:"" help:"Docker command."`
 
 	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Env        []string `flag:"" name:"env" short:"e" sep:"none"`
 	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Init       bool     `flag:"" name:"init"`
 	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
@@ -30,6 +31,7 @@ func (cmd *TaskRunCommand) Run() error {
 			old := &ServiceState{}
 			new := &ServiceState{
 				Command:  cmd.Command,
+				Env:      cmd.Env,
 				Image:    cmd.Image,
 				Init:     cmd.Init,
 				Mounts:   cmd.Mounts,
@@ -85,6 +87,13 @@ func (cmd *TaskRunCommand) Run() error {
 						Value: strings.Join(cmd.Command, " "),
 					},
 				},
+			}
+			for _, env := range cmd.Env {
+				command.Flags = append(command.Flags, ShellFlag{
+					Check: env != "",
+					Name:  "env",
+					Value: env,
+				})
 			}
 			for _, mount := range cmd.Mounts {
 				command.Flags = append(command.Flags, ShellFlag{
