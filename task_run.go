@@ -20,6 +20,7 @@ type TaskRunCommand struct {
 	Publish    []string `flag:"" name:"publish" short:"p" sep:"none"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 	Secrets    []string `flag:"" name:"secret" sep:"none"`
+	User       string   `flag:"" name:"user" short:"u"`
 	WorkDir    string   `flag:"" name:"workdir" short:"w"`
 }
 
@@ -36,6 +37,7 @@ func (cmd *TaskRunCommand) Run() error {
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
 				Secrets:  cmd.Secrets,
+				User:     cmd.User,
 				WorkDir:  cmd.WorkDir,
 			}
 			command := ShellCommand{
@@ -59,6 +61,12 @@ func (cmd *TaskRunCommand) Run() error {
 						Check: true,
 						Name:  "restart-condition",
 						Value: "none",
+					},
+					{
+						AllowEmpty: true,
+						Check:      true,
+						Name:       "user",
+						Value:      cmd.User,
 					},
 					{
 						AllowEmpty: true,

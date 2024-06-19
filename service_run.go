@@ -20,6 +20,7 @@ type DockerServiceInspectJson struct {
 				Secrets []struct {
 					SecretName string `json:"SecretName"`
 				} `json:"Secrets"`
+				User string `json:"User"`
 			} `json:"ContainerSpec"`
 			Networks []struct {
 				Target string `json:"Target"`
@@ -54,6 +55,7 @@ type ServiceRunCommand struct {
 	Publish    []string `flag:"" name:"publish" short:"p" sep:"none"`
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 	Secrets    []string `flag:"" name:"secret" sep:"none"`
+	User       string   `flag:"" name:"user" short:"u"`
 	WorkDir    string   `flag:"" name:"workdir" short:"w"`
 }
 
@@ -69,6 +71,7 @@ func (cmd *ServiceRunCommand) Run() error {
 				Publish:  cmd.Publish,
 				Replicas: fmt.Sprint(cmd.Replicas),
 				Secrets:  cmd.Secrets,
+				User:     cmd.User,
 				WorkDir:  cmd.WorkDir,
 			}
 			command := ShellCommand{
@@ -82,6 +85,12 @@ func (cmd *ServiceRunCommand) Run() error {
 						Check: true,
 						Name:  "replicas",
 						Value: fmt.Sprintf("%d", cmd.Replicas),
+					},
+					{
+						AllowEmpty: true,
+						Check:      true,
+						Name:       "user",
+						Value:      cmd.User,
 					},
 					{
 						AllowEmpty: true,
@@ -258,6 +267,7 @@ func (cmd *ServiceRunCommand) Run() error {
 					old.Publish = portsExisting
 					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)
 					old.Secrets = secretsExisting
+					old.User = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.User
 					old.WorkDir = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Dir
 
 					command.Name = "docker service update"

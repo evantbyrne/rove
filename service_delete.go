@@ -41,6 +41,7 @@ func (cmd *ServiceDeleteCommand) Run() error {
 					for _, secret := range dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Secrets {
 						old.Secrets = append(old.Secrets, secret.SecretName)
 					}
+					old.User = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.User
 					old.WorkDir = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Dir
 					return nil
 				}).
