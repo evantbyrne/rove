@@ -2,55 +2,52 @@ package rove
 
 import (
 	"fmt"
-	"io"
-	"os"
+	"slices"
+	"strings"
 	"testing"
 )
-
-func captureStdout(callback func() error) (string, error) {
-	rescueStdout := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		return "", err
-	}
-	os.Stdout = w
-	if err := callback(); err != nil {
-		return "", err
-	}
-	w.Close()
-	out, err := io.ReadAll(r)
-	if err != nil {
-		return "", err
-	}
-	os.Stdout = rescueStdout
-	return string(out), nil
-}
 
 func TestNetworkAddCommand(t *testing.T) {
 	if err := testDatabase(func() error {
 		mock := &SshConnectionMock{}
-		stdout, err := captureStdout(func() error {
-			cmd := &NetworkAddCommand{
-				Force:   true,
-				Machine: "default",
-				Name:    "foo",
-			}
-			return cmd.Do(mock)
-		})
-		if err != nil {
-			return err
+		expectedCmd := []string{"docker network create --attachable --driver overlay --label rove --scope swarm foo"}
+		expected := fmt.Sprint(
+			"\nRove will create the 'foo' network.\n\n",
+			"Confirmations skipped.\n\n",
+			"Created 'foo' network.\n\n")
+
+		capture(t).
+			Run(func() error {
+				cmd := &NetworkAddCommand{
+					Force:   true,
+					Machine: "default",
+					Name:    "foo",
+				}
+				return cmd.Do(mock, strings.NewReader(""))
+			}).
+			ExpectStdout(expected)
+
+		if !slices.Equal(mock.CommandsRun, expectedCmd) {
+			t.Errorf("'%#v' did not match expected.", mock.CommandsRun)
 		}
-		expected := "docker network create --attachable --driver overlay --label rove --scope swarm foo"
-		if len(mock.CommandsRun) != 1 || mock.CommandsRun[0] != expected {
-			t.Fatalf("'%#v' did not match expected.", mock.CommandsRun)
-		}
+
 		expected = fmt.Sprint(
 			"\nRove will create the 'foo' network.\n\n",
-			"Confirmations skipped.\n",
+			"Do you want Rove to run this deployment?\n",
+			"  Type 'yes' to approve, or anything else to deny.\n",
+			"  Enter a value: \n",
 			"Created 'foo' network.\n\n")
-		if stdout != expected {
-			t.Fatalf("'%s' did not match:\n'%s'", stdout, expected)
-		}
+
+		capture(t).
+			Run(func() error {
+				cmd := &NetworkAddCommand{
+					Machine: "default",
+					Name:    "foo",
+				}
+				return cmd.Do(mock, strings.NewReader("yes\n"))
+			}).
+			ExpectStdout(expected)
+
 		return nil
 	}); err != nil {
 		t.Fatal(err)

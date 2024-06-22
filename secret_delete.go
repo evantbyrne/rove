@@ -2,6 +2,7 @@ package rove
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/alessio/shellescape"
 )
@@ -16,9 +17,9 @@ type SecretDeleteCommand struct {
 
 func (cmd *SecretDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			fmt.Printf("\nRove will delete the '%s' secret.\n", cmd.Name)
-			if err := confirmDeployment(cmd.Force); err != nil {
+			if err := confirmDeployment(cmd.Force, stdin); err != nil {
 				return err
 			}
 			return conn.

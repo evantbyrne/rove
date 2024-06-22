@@ -2,6 +2,7 @@ package rove
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/alessio/shellescape"
@@ -27,7 +28,7 @@ type TaskRunCommand struct {
 
 func (cmd *TaskRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			old := &ServiceState{}
 			new := &ServiceState{
 				Command:  cmd.Command,
@@ -128,7 +129,7 @@ func (cmd *TaskRunCommand) Run() error {
 			fmt.Print("\nRove will deploy:\n\n")
 			fmt.Println(" + task:")
 			fmt.Println(diffText)
-			if err := confirmDeployment(cmd.Force); err != nil {
+			if err := confirmDeployment(cmd.Force, stdin); err != nil {
 				return err
 			}
 

@@ -3,6 +3,7 @@ package rove
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -26,7 +27,7 @@ type TaskListEntryJson struct {
 
 func (cmd *TaskListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			output := TaskListJson{
 				Tasks: make([]TaskListEntryJson, 0),
 			}

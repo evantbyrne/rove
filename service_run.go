@@ -3,6 +3,7 @@ package rove
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 
@@ -63,7 +64,7 @@ type ServiceRunCommand struct {
 
 func (cmd *ServiceRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			old := &ServiceState{}
 			new := &ServiceState{
 				Command:  cmd.Command,
@@ -340,7 +341,7 @@ func (cmd *ServiceRunCommand) Run() error {
 				}
 			}
 			fmt.Println(diffText)
-			if err := confirmDeployment(cmd.Force); err != nil {
+			if err := confirmDeployment(cmd.Force, stdin); err != nil {
 				return err
 			}
 

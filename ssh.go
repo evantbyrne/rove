@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -14,7 +15,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func SshConnect(address string, user string, key []byte, callback func(conn SshRunner) error) error {
+func SshConnect(address string, user string, key []byte, callback func(conn SshRunner, stdin io.Reader) error) error {
 	signer, err := ssh.ParsePrivateKey(key)
 	if err != nil {
 		log.Fatalf("unable to parse private key: %v", err)
@@ -31,10 +32,10 @@ func SshConnect(address string, user string, key []byte, callback func(conn SshR
 		log.Fatalf("Failed to dial: %v", err)
 	}
 	defer client.Close()
-	return callback(&SshConnection{Client: client})
+	return callback(&SshConnection{Client: client}, os.Stdin)
 }
 
-func SshMachine(machine *Machine, callback func(conn SshRunner) error) error {
+func SshMachine(machine *Machine, callback func(conn SshRunner, stdin io.Reader) error) error {
 	key, err := os.ReadFile(machine.KeyPath)
 	if err != nil {
 		return fmt.Errorf("unable to read private key file: %v", err)
@@ -42,7 +43,7 @@ func SshMachine(machine *Machine, callback func(conn SshRunner) error) error {
 	return SshConnect(fmt.Sprintf("%s:%d", machine.Address, machine.Port), machine.User, key, callback)
 }
 
-func SshMachineByName(name string, callback func(conn SshRunner) error) error {
+func SshMachineByName(name string, callback func(conn SshRunner, stdin io.Reader) error) error {
 	name = cmp.Or(name, GetPreference(DefaultMachine))
 	if name == "" {
 		return errors.New("🚫 No machine specified. Either run `rove machine use [NAME]` to set the default, or use the `--machine [NAME]` flag on individual commands")
@@ -99,14 +100,14 @@ func (conn *SshConnection) Run(command string, callback func(string) error) SshR
 	return conn
 }
 
-func confirmDeployment(force bool) error {
+func confirmDeployment(force bool, stdin io.Reader) error {
 	if force {
 		fmt.Println("\nConfirmations skipped.")
 	} else {
 		fmt.Println("\nDo you want Rove to run this deployment?")
 		fmt.Println("  Type 'yes' to approve, or anything else to deny.")
 		fmt.Print("  Enter a value: ")
-		line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		line, err := bufio.NewReader(stdin).ReadString('\n')
 		if err != nil {
 			fmt.Println("🚫 Could not read from STDIN")
 			return err

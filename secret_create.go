@@ -27,7 +27,7 @@ type SecretCreateJson struct {
 
 func (cmd *SecretCreateCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			fileName := cmd.Name + ".txt"
 			secret, err := io.ReadAll(cmd.File)
 			if err != nil {

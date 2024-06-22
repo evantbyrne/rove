@@ -3,6 +3,7 @@ package rove
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -40,7 +41,7 @@ type ServiceListPortJson struct {
 
 func (cmd *ServiceListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			output := ServiceListJson{
 				Services: make([]ServiceListEntryJson, 0),
 			}

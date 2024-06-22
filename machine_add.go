@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/evantbyrne/trance"
@@ -43,7 +44,7 @@ func (cmd *MachineAddCommand) Run() error {
 		if err != nil {
 			return fmt.Errorf("unable to read private key file: %v", err)
 		}
-		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn SshRunner) error {
+		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn SshRunner, stdin io.Reader) error {
 			fmt.Printf("\nConnected to remote address '%s@%s:%d'.\n", cmd.User, cmd.Address, cmd.Port)
 			mustInstallDocker := true
 			mustEnableSwarm := true
@@ -80,7 +81,7 @@ func (cmd *MachineAddCommand) Run() error {
 				if mustEnableSwarm {
 					fmt.Println(" ~ Enable swarm")
 				}
-				if err := confirmDeployment(cmd.Force); err != nil {
+				if err := confirmDeployment(cmd.Force, stdin); err != nil {
 					return err
 				}
 				fmt.Println()

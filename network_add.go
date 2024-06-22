@@ -2,6 +2,7 @@ package rove
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/alessio/shellescape"
 )
@@ -14,14 +15,14 @@ type NetworkAddCommand struct {
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
-func (cmd *NetworkAddCommand) Do(conn SshRunner) error {
+func (cmd *NetworkAddCommand) Do(conn SshRunner, stdin io.Reader) error {
 	fmt.Printf("\nRove will create the '%s' network.\n", cmd.Name)
-	if err := confirmDeployment(cmd.Force); err != nil {
+	if err := confirmDeployment(cmd.Force, stdin); err != nil {
 		return err
 	}
 	return conn.
 		Run(fmt.Sprint("docker network create --attachable --driver overlay --label rove --scope swarm ", shellescape.Quote(cmd.Name)), func(res string) error {
-			fmt.Printf("Created '%s' network.\n\n", cmd.Name)
+			fmt.Printf("\nCreated '%s' network.\n\n", cmd.Name)
 			return nil
 		}).
 		OnError(func(err error) error {

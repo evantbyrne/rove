@@ -3,6 +3,7 @@ package rove
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/alessio/shellescape"
@@ -18,7 +19,7 @@ type ServiceDeleteCommand struct {
 
 func (cmd *ServiceDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			old := &ServiceState{
 				Command: make([]string, 0),
 				Publish: make([]string, 0),
@@ -56,7 +57,7 @@ func (cmd *ServiceDeleteCommand) Run() error {
 			fmt.Printf("\nRove will delete %s:\n\n", cmd.Name)
 			fmt.Printf(" - service %s:\n", cmd.Name)
 			fmt.Println(diffText)
-			if err := confirmDeployment(cmd.Force); err != nil {
+			if err := confirmDeployment(cmd.Force, stdin); err != nil {
 				return err
 			}
 
