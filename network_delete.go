@@ -16,7 +16,7 @@ type NetworkDeleteCommand struct {
 
 func (cmd *NetworkDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			fmt.Printf("\nRove will delete the '%s' network.\n", cmd.Name)
 			if err := confirmDeployment(cmd.Force); err != nil {
 				return err
@@ -32,7 +32,7 @@ func (cmd *NetworkDeleteCommand) Run() error {
 					}
 					return err
 				}).
-				Error
+				Error()
 		})
 	})
 }

@@ -27,7 +27,7 @@ type TaskRunCommand struct {
 
 func (cmd *TaskRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			old := &ServiceState{}
 			new := &ServiceState{
 				Command:  cmd.Command,
@@ -145,7 +145,7 @@ func (cmd *TaskRunCommand) Run() error {
 					}
 					return err
 				}).
-				Error
+				Error()
 		})
 	})
 }

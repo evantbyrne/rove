@@ -58,11 +58,11 @@ func (cmd *LogsCommand) Run() error {
 		if cmd.Follow && cmd.Timeout != "" {
 			command.Name = fmt.Sprintf("timeout --verbose %s %s", cmd.Timeout, command.Name)
 		}
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			return conn.Run(command.String(), func(res string) error {
 				fmt.Print(res)
 				return nil
-			}).Error
+			}).Error()
 		})
 	})
 }

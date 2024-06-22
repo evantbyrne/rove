@@ -16,7 +16,7 @@ type SecretDeleteCommand struct {
 
 func (cmd *SecretDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			fmt.Printf("\nRove will delete the '%s' secret.\n", cmd.Name)
 			if err := confirmDeployment(cmd.Force); err != nil {
 				return err
@@ -32,7 +32,7 @@ func (cmd *SecretDeleteCommand) Run() error {
 					}
 					return err
 				}).
-				Error
+				Error()
 		})
 	})
 }

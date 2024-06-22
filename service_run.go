@@ -63,7 +63,7 @@ type ServiceRunCommand struct {
 
 func (cmd *ServiceRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			old := &ServiceState{}
 			new := &ServiceState{
 				Command:  cmd.Command,
@@ -220,7 +220,7 @@ func (cmd *ServiceRunCommand) Run() error {
 								}
 								return nil
 							}).
-							Error
+							Error()
 						if errNetwork != nil {
 							return errNetwork
 						}
@@ -320,7 +320,7 @@ func (cmd *ServiceRunCommand) Run() error {
 					return nil
 				}).
 				OnError(SkipReset).
-				Error
+				Error()
 			if err != nil {
 				fmt.Println("🚫 Could not create deployment plan")
 				return err
@@ -357,7 +357,7 @@ func (cmd *ServiceRunCommand) Run() error {
 					}
 					return err
 				}).
-				Error
+				Error()
 		})
 	})
 }

@@ -40,7 +40,7 @@ type ServiceListPortJson struct {
 
 func (cmd *ServiceListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			output := ServiceListJson{
 				Services: make([]ServiceListEntryJson, 0),
 			}
@@ -63,7 +63,7 @@ func (cmd *ServiceListCommand) Run() error {
 					}
 				}
 				return nil
-			}).Error; err != nil {
+			}).Error(); err != nil {
 				return err
 			}
 
@@ -78,7 +78,7 @@ func (cmd *ServiceListCommand) Run() error {
 						output.Services[i].Ports = append(output.Services[i].Ports, ServiceListPortJson(entry))
 					}
 					return nil
-				}).Error; err != nil {
+				}).Error(); err != nil {
 					return err
 				}
 			}

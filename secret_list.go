@@ -25,7 +25,7 @@ type SecretListJson struct {
 
 func (cmd *SecretListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			return conn.
 				Run("docker secret ls --format json --filter label=rove", func(res string) error {
 					output := make([]DockerSecretLsJson, 0)
@@ -56,7 +56,7 @@ func (cmd *SecretListCommand) Run() error {
 					}
 					return nil
 				}).
-				Error
+				Error()
 		})
 	})
 }

@@ -27,27 +27,29 @@ type SecretCreateJson struct {
 
 func (cmd *SecretCreateCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			fileName := cmd.Name + ".txt"
 			secret, err := io.ReadAll(cmd.File)
 			if err != nil {
 				return err
 			}
 
-			transfer, err := sftp.NewClient(conn.Client)
-			if err != nil {
-				return err
-			}
-			defer transfer.Close()
+			if connReal, ok := conn.(*SshConnection); ok {
+				transfer, err := sftp.NewClient(connReal.Client)
+				if err != nil {
+					return err
+				}
+				defer transfer.Close()
 
-			fh, err := transfer.Create(fileName)
-			if err != nil {
-				return err
+				fh, err := transfer.Create(fileName)
+				if err != nil {
+					return err
+				}
+				if _, err := fh.Write([]byte(secret)); err != nil {
+					return err
+				}
+				fh.Close()
 			}
-			if _, err := fh.Write([]byte(secret)); err != nil {
-				return err
-			}
-			fh.Close()
 
 			err = conn.
 				Run(fmt.Sprintf("docker secret create --label 'rove=secret' %s %s", shellescape.Quote(cmd.Name), fileName), func(res string) error {
@@ -74,7 +76,7 @@ func (cmd *SecretCreateCommand) Run() error {
 					}
 					return err
 				}).
-				Error
+				Error()
 
 			conn.Run(fmt.Sprintf("rm %s", fileName), func(_ string) error {
 				return nil

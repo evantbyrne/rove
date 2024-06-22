@@ -18,7 +18,7 @@ type ServiceDeleteCommand struct {
 
 func (cmd *ServiceDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			old := &ServiceState{
 				Command: make([]string, 0),
 				Publish: make([]string, 0),
@@ -46,7 +46,7 @@ func (cmd *ServiceDeleteCommand) Run() error {
 					old.WorkDir = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Dir
 					return nil
 				}).
-				Error
+				Error()
 			if err != nil {
 				fmt.Println("🚫 Could not create deployment plan")
 				return err
@@ -73,7 +73,7 @@ func (cmd *ServiceDeleteCommand) Run() error {
 					}
 					return err
 				}).
-				Error
+				Error()
 		})
 	})
 }

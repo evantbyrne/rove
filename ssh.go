@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func SshConnect(address string, user string, key []byte, callback func(conn *SshConnection) error) error {
+func SshConnect(address string, user string, key []byte, callback func(conn SshRunner) error) error {
 	signer, err := ssh.ParsePrivateKey(key)
 	if err != nil {
 		log.Fatalf("unable to parse private key: %v", err)
@@ -34,7 +34,7 @@ func SshConnect(address string, user string, key []byte, callback func(conn *Ssh
 	return callback(&SshConnection{Client: client})
 }
 
-func SshMachine(machine *Machine, callback func(conn *SshConnection) error) error {
+func SshMachine(machine *Machine, callback func(conn SshRunner) error) error {
 	key, err := os.ReadFile(machine.KeyPath)
 	if err != nil {
 		return fmt.Errorf("unable to read private key file: %v", err)
@@ -42,7 +42,7 @@ func SshMachine(machine *Machine, callback func(conn *SshConnection) error) erro
 	return SshConnect(fmt.Sprintf("%s:%d", machine.Address, machine.Port), machine.User, key, callback)
 }
 
-func SshMachineByName(name string, callback func(conn *SshConnection) error) error {
+func SshMachineByName(name string, callback func(conn SshRunner) error) error {
 	name = cmp.Or(name, GetPreference(DefaultMachine))
 	if name == "" {
 		return errors.New("🚫 No machine specified. Either run `rove machine use [NAME]` to set the default, or use the `--machine [NAME]` flag on individual commands")
@@ -64,34 +64,38 @@ func SshMachineByName(name string, callback func(conn *SshConnection) error) err
 
 type SshConnection struct {
 	Client *ssh.Client
-	Error  error
+	Err    error
 }
 
-func (conn *SshConnection) OnError(callback func(error) error) *SshConnection {
-	if conn.Error != nil {
-		conn.Error = callback(conn.Error)
+func (conn *SshConnection) Error() error {
+	return conn.Err
+}
+
+func (conn *SshConnection) OnError(callback func(error) error) SshRunner {
+	if conn.Err != nil {
+		conn.Err = callback(conn.Err)
 	}
 	return conn
 }
 
-func (conn *SshConnection) Run(command string, callback func(string) error) *SshConnection {
-	if conn.Error != nil {
+func (conn *SshConnection) Run(command string, callback func(string) error) SshRunner {
+	if conn.Err != nil {
 		return conn
 	}
 	var bufferStdout bytes.Buffer
 	session, err := conn.Client.NewSession()
 	if err != nil {
-		conn.Error = fmt.Errorf("failed to create session for command '%s': %v", command, err)
+		conn.Err = fmt.Errorf("failed to create session for command '%s': %v", command, err)
 		return conn
 	}
 	defer session.Close()
 	session.Stderr = os.Stderr
 	session.Stdout = &bufferStdout
 	if err := session.Run(command); err != nil {
-		conn.Error = fmt.Errorf("failed to run command '%s': %v", command, err)
+		conn.Err = fmt.Errorf("failed to run command '%s': %v", command, err)
 		return conn
 	}
-	conn.Error = callback(bufferStdout.String())
+	conn.Err = callback(bufferStdout.String())
 	return conn
 }
 
@@ -112,4 +116,36 @@ func confirmDeployment(force bool) error {
 		}
 	}
 	return nil
+}
+
+type SshRunner interface {
+	Error() error
+	OnError(func(error) error) SshRunner
+	Run(string, func(string) error) SshRunner
+}
+
+type SshConnectionMock struct {
+	CommandsRun []string
+	Err         error
+	Result      string
+}
+
+func (conn *SshConnectionMock) Error() error {
+	return conn.Err
+}
+
+func (conn *SshConnectionMock) OnError(callback func(error) error) SshRunner {
+	if conn.Err != nil {
+		conn.Err = callback(conn.Err)
+	}
+	return conn
+}
+
+func (conn *SshConnectionMock) Run(command string, callback func(string) error) SshRunner {
+	if conn.Err != nil {
+		return conn
+	}
+	conn.CommandsRun = append(conn.CommandsRun, command)
+	conn.Err = callback(conn.Result)
+	return conn
 }

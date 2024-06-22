@@ -43,7 +43,7 @@ func (cmd *MachineAddCommand) Run() error {
 		if err != nil {
 			return fmt.Errorf("unable to read private key file: %v", err)
 		}
-		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn *SshConnection) error {
+		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn SshRunner) error {
 			fmt.Printf("\nConnected to remote address '%s@%s:%d'.\n", cmd.User, cmd.Address, cmd.Port)
 			mustInstallDocker := true
 			mustEnableSwarm := true
@@ -67,7 +67,7 @@ func (cmd *MachineAddCommand) Run() error {
 					return nil
 				}).
 				OnError(SkipReset).
-				Error
+				Error()
 			if err != nil {
 				return err
 			}
@@ -93,7 +93,7 @@ func (cmd *MachineAddCommand) Run() error {
 						fmt.Println("~ Installed docker")
 						return nil
 					}).
-					Error
+					Error()
 				if err != nil {
 					return err
 				}
@@ -105,7 +105,7 @@ func (cmd *MachineAddCommand) Run() error {
 						fmt.Println("~ Enabled swarm")
 						return nil
 					}).
-					Error
+					Error()
 				if err != nil {
 					return err
 				}

@@ -26,7 +26,7 @@ type TaskListEntryJson struct {
 
 func (cmd *TaskListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn *SshConnection) error {
+		return SshMachineByName(cmd.Machine, func(conn SshRunner) error {
 			output := TaskListJson{
 				Tasks: make([]TaskListEntryJson, 0),
 			}
@@ -48,7 +48,7 @@ func (cmd *TaskListCommand) Run() error {
 					}
 				}
 				return nil
-			}).Error; err != nil {
+			}).Error(); err != nil {
 				return err
 			}
 
@@ -64,7 +64,7 @@ func (cmd *TaskListCommand) Run() error {
 						output.Tasks[i].Ports = append(output.Tasks[i].Ports, ServiceListPortJson(entry))
 					}
 					return nil
-				}).Error; err != nil {
+				}).Error(); err != nil {
 					return err
 				}
 			}

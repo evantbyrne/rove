@@ -5,8 +5,6 @@ import (
 	"github.com/evantbyrne/rove"
 	"github.com/evantbyrne/trance"
 	"github.com/evantbyrne/trance/sqlitedialect"
-
-	_ "modernc.org/sqlite"
 )
 
 var cli struct {
