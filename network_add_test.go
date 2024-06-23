@@ -23,7 +23,7 @@ func TestNetworkAddCommand(t *testing.T) {
 					Machine: "default",
 					Name:    "foo",
 				}
-				return cmd.Do(mock, strings.NewReader(""))
+				return cmd.Do(mock, nil)
 			}).
 			ExpectStdout(expected)
 
