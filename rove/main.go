@@ -8,8 +8,9 @@ import (
 )
 
 var cli struct {
-	Login   rove.LoginCommand `cmd:"" help:"Log into docker registries."`
-	Logs    rove.LogsCommand  `cmd:"" help:"View logs."`
+	Login   rove.LoginCommand  `cmd:"" help:"Log into docker registries."`
+	Logout  rove.LogoutCommand `cmd:"" help:"Log out of docker registries."`
+	Logs    rove.LogsCommand   `cmd:"" help:"View logs."`
 	Machine struct {
 		Add    rove.MachineAddCommand    `cmd:""`
 		Delete rove.MachineDeleteCommand `cmd:""`

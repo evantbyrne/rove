@@ -15,7 +15,7 @@ type LoginCommand struct {
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
-	Registry   string `flag:"" name:"registry" help:"Docker registery server."`
+	Registry   string `flag:"" name:"registry" help:"Docker registry server."`
 }
 
 func (cmd *LoginCommand) Do(conn SshRunner, stdin io.Reader) error {
