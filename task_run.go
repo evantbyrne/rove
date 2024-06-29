@@ -3,7 +3,6 @@ package rove
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/alessio/shellescape"
 )
@@ -83,11 +82,13 @@ func (cmd *TaskRunCommand) Run() error {
 						Check: true,
 						Value: shellescape.Quote(cmd.Image),
 					},
-					{
-						Check: len(cmd.Command) > 0,
-						Value: strings.Join(cmd.Command, " "),
-					},
 				},
+			}
+			for _, arg := range cmd.Command {
+				command.Args = append(command.Args, ShellArg{
+					Check: true,
+					Value: shellescape.Quote(arg),
+				})
 			}
 			for _, env := range cmd.Env {
 				command.Flags = append(command.Flags, ShellFlag{

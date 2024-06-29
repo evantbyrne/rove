@@ -152,11 +152,13 @@ func (cmd *ServiceRunCommand) Run() error {
 							Check: true,
 							Value: shellescape.Quote(cmd.Image),
 						},
-						ShellArg{
-							Check: len(cmd.Command) > 0,
-							Value: strings.Join(cmd.Command, " "),
-						},
 					)
+					for _, arg := range cmd.Command {
+						command.Args = append(command.Args, ShellArg{
+							Check: true,
+							Value: shellescape.Quote(arg),
+						})
+					}
 					return ErrorSkip{}
 				}).
 				Run(fmt.Sprint("docker service inspect ", cmd.Name), func(res string) error {
@@ -307,7 +309,7 @@ func (cmd *ServiceRunCommand) Run() error {
 					command.Flags = append(command.Flags, ShellFlag{
 						Check: len(cmd.Command) > 0,
 						Name:  "args",
-						Value: strings.Join(cmd.Command, " "),
+						Value: shellescape.QuoteCommand(cmd.Command),
 					})
 					command.Flags = append(command.Flags, ShellFlag{
 						Check: true,
