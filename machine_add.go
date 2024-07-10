@@ -3,9 +3,11 @@ package rove
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/evantbyrne/trance"
 )
@@ -46,9 +48,25 @@ func (cmd *MachineAddCommand) Run() error {
 		}
 		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn SshRunner, stdin io.Reader) error {
 			fmt.Printf("\nConnected to remote address '%s@%s:%d'.\n", cmd.User, cmd.Address, cmd.Port)
+
+			// Verify ufw is installed.
+			if conn.Run("command -v ufw", func(_ string) error {
+				return nil
+			}).Error() != nil {
+				return errors.New("ufw not installed on target machine")
+			}
+
+			mustEnableUfw := true
 			mustInstallDocker := true
 			mustEnableSwarm := true
 			err := conn.
+				Run("sudo ufw status", func(res string) error {
+					if strings.HasPrefix(res, "Status: active") {
+						mustEnableUfw = false
+					}
+					return nil
+				}).
+				OnError(SkipReset).
 				Run("command -v docker", func(_ string) error {
 					mustInstallDocker = false
 					return nil
@@ -73,8 +91,11 @@ func (cmd *MachineAddCommand) Run() error {
 				return err
 			}
 
-			if mustInstallDocker || mustEnableSwarm {
+			if mustEnableUfw || mustInstallDocker || mustEnableSwarm {
 				fmt.Print("\nRove will make the following changes to remote machine:\n\n")
+				if mustEnableUfw {
+					fmt.Println(" ~ Enable firewall")
+				}
 				if mustInstallDocker {
 					fmt.Println(" ~ Install docker")
 				}
@@ -85,6 +106,29 @@ func (cmd *MachineAddCommand) Run() error {
 					return err
 				}
 				fmt.Println()
+			} else {
+				fmt.Println("\nNo changes needed.")
+			}
+
+			if mustEnableUfw {
+				err = conn.
+					Run("sudo ufw logging on", func(res string) error {
+						fmt.Println("sudo ufw logging on", res)
+						return nil
+					}).
+					Run(fmt.Sprintf("sudo ufw allow %d/tcp", cmd.Port), func(res string) error {
+						fmt.Println(fmt.Sprintf("sudo ufw allow %d/tcp", cmd.Port), res)
+						return nil
+					}).
+					Run("sudo ufw --force enable", func(res string) error {
+						fmt.Println("sudo ufw enable", res)
+						fmt.Println("~ Enabled firewall")
+						return nil
+					}).
+					Error()
+				if err != nil {
+					return err
+				}
 			}
 
 			if mustInstallDocker {
