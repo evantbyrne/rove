@@ -12,14 +12,19 @@ type DockerNetworkLsJson struct {
 	Name string `json:"Name"`
 }
 
-type NetworkListCommand struct {
-	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
-	Format     string `flag:"" name:"format" enum:"text,json" help:"Output format. Choices: \"text\", \"json\"." default:"text"`
-	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
+type NetworkListJson struct {
+	Networks []NetworkJson `json:"networks"`
 }
 
-type NetworkListJson struct {
-	Networks []DockerNetworkLsJson
+type NetworkJson struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type NetworkListCommand struct {
+	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Json       bool   `flag:"" name:"json" help:"Output as JSON."`
+	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
 func (cmd *NetworkListCommand) Run() error {
@@ -38,9 +43,13 @@ func (cmd *NetworkListCommand) Run() error {
 							output = append(output, dockerNetworkLs)
 						}
 					}
-					if cmd.Format == "json" {
-						t := NetworkListJson{
-							Networks: output,
+					if cmd.Json {
+						var t NetworkListJson
+						for _, network := range output {
+							t.Networks = append(t.Networks, NetworkJson{
+								Id:   network.Id,
+								Name: network.Name,
+							})
 						}
 						out, err := json.MarshalIndent(t, "", "    ")
 						if err != nil {

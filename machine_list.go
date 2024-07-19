@@ -9,7 +9,7 @@ import (
 
 type MachineListCommand struct {
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
-	Format     string `flag:"" name:"format" enum:"text,json" help:"Output format. Choices: \"text\", \"json\"." default:"text"`
+	Json       bool   `flag:"" name:"json" help:"Output as JSON."`
 }
 
 type MachineListJson struct {
@@ -22,7 +22,7 @@ func (cmd *MachineListCommand) Run() error {
 			Sort("name").
 			All().
 			Then(func(machines []*Machine) error {
-				if cmd.Format == "json" {
+				if cmd.Json {
 					to := MachineListJson{
 						Machines: machines,
 					}

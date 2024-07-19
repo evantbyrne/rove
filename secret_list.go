@@ -21,7 +21,14 @@ type SecretListCommand struct {
 }
 
 type SecretListJson struct {
-	Secrets []DockerSecretLsJson
+	Secrets []SecretJson `json:"secrets"`
+}
+
+type SecretJson struct {
+	CreatedAt string `json:"created_at"`
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 func (cmd *SecretListCommand) Run() error {
@@ -41,8 +48,14 @@ func (cmd *SecretListCommand) Run() error {
 						}
 					}
 					if cmd.Json {
-						t := SecretListJson{
-							Secrets: output,
+						var t SecretListJson
+						for _, secret := range output {
+							t.Secrets = append(t.Secrets, SecretJson{
+								CreatedAt: secret.CreatedAt,
+								Id:        secret.Id,
+								Name:      secret.Name,
+								UpdatedAt: secret.UpdatedAt,
+							})
 						}
 						out, err := json.MarshalIndent(t, "", "    ")
 						if err != nil {
