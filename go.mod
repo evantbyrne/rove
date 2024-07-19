@@ -1,14 +1,11 @@
 module github.com/evantbyrne/rove
 
-go 1.22.0
-
-replace github.com/evantbyrne/trance => ../rrfconcept/trance
-
-require github.com/evantbyrne/trance v0.0.0-00010101000000-000000000000
+go 1.22.5
 
 require (
 	github.com/alecthomas/kong v0.9.0
 	github.com/alessio/shellescape v1.4.2
+	github.com/evantbyrne/trance v0.0.1
 	github.com/pkg/sftp v1.13.6
 	golang.org/x/crypto v0.23.0
 	modernc.org/sqlite v1.29.10
