@@ -1,0 +1,1 @@
+By submitting a pull request, you represent that you have the right to license your contribution to Rove and the community, and agree by submitting the patch that your contributions are licensed under the [Rove license](https://github.com/evantbyrne/rove/blob/main/LICENSE.md).
