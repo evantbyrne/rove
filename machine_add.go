@@ -3,7 +3,6 @@ package rove
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -49,17 +48,19 @@ func (cmd *MachineAddCommand) Run() error {
 		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn SshRunner, stdin io.Reader) error {
 			fmt.Printf("\nConnected to remote address '%s@%s:%d'.\n", cmd.User, cmd.Address, cmd.Port)
 
-			// Verify ufw is installed.
-			if conn.Run("command -v ufw", func(_ string) error {
-				return nil
-			}).Error() != nil {
-				return errors.New("ufw not installed on target machine")
-			}
-
+			missingUfw := false
 			mustEnableUfw := true
 			mustInstallDocker := true
 			mustEnableSwarm := true
 			err := conn.
+				Run("command -v ufw", func(_ string) error {
+					return nil
+				}).
+				OnError(func(error) error {
+					missingUfw = true
+					mustEnableUfw = false
+					return ErrorSkip{}
+				}).
 				Run("sudo ufw status", func(res string) error {
 					if strings.HasPrefix(res, "Status: active") {
 						mustEnableUfw = false
@@ -89,6 +90,10 @@ func (cmd *MachineAddCommand) Run() error {
 				Error()
 			if err != nil {
 				return err
+			}
+
+			if missingUfw {
+				fmt.Println("\n⚠️  Warning: UFW missing. Cannot enable firewall. You should install UFW on the target machine and rerun this command. Alternatively, you may manually disallow access to Docker Swarm management ports.")
 			}
 
 			if mustEnableUfw || mustInstallDocker || mustEnableSwarm {
