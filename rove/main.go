@@ -41,7 +41,7 @@ var cli struct {
 
 func main() {
 	trance.SetDialect(sqlitedialect.SqliteDialect{})
-	ctx := kong.Parse(&cli)
+	ctx := kong.Parse(&cli, kong.UsageOnError())
 	err := ctx.Run()
 	ctx.FatalIfErrorf(err)
 }
