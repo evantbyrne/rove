@@ -14,6 +14,8 @@ The Rove command line client connects to servers via SSH with key-based authenti
 
 See the [Rove homepage](https://rove.dev) for a tutorial on basic usage.
 
+Check out the [roadmap](https://github.com/users/evantbyrne/projects/1) for planned features.
+
 ```
 $ go run rove/main.go --help
 Usage: main <command> [flags]
