@@ -77,7 +77,7 @@ Rove ships as a single binary which may be placed wherever you please, usually a
 
 ## Supported Systems
 
-Rove currently supports running the command line client on MacOS and Linux generally. It fully supports deploying to Ubuntu 24 or later, with plans to more fully support other Linux distributions once firewall configuration has been implemented for systems that don't ship with UFW. Both x86 and Arm architectures are supported.
+Rove currently supports running the command line client on MacOS and Linux generally. It fully supports deploying to Ubuntu 24 and Debian 12 or later, with plans to more fully support other Linux distributions once firewall configuration has been implemented for systems that don't support UFW. Both x86 and Arm architectures are supported.
 
 
 ## Security
