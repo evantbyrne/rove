@@ -54,11 +54,19 @@ func (cmd *MachineAddCommand) Run() error {
 				return nil
 			}
 
+			missingApt := false
 			missingUfw := false
 			mustEnableUfw := true
 			mustInstallDocker := true
 			mustEnableSwarm := true
 			err := conn.
+				Run("command -v apt-get", func(_ string) error {
+					return nil
+				}).
+				OnError(func(error) error {
+					missingApt = true
+					return nil
+				}).
 				Run("command -v ufw", func(_ string) error {
 					return nil
 				}).
@@ -98,13 +106,16 @@ func (cmd *MachineAddCommand) Run() error {
 				return err
 			}
 
-			if missingUfw {
-				fmt.Println("\n⚠️  Warning: UFW missing. Cannot enable firewall. You should install UFW on the target machine and rerun this command. Alternatively, you may manually disallow access to Docker Swarm management ports.")
+			if missingApt && missingUfw {
+				fmt.Println("\n⚠️  Warning: ufw missing on system without apt. Cannot enable firewall. You should install ufw on the target machine and rerun this command. Alternatively, you may manually disallow access to Docker Swarm management ports.")
 			}
 
-			if mustEnableUfw || mustInstallDocker || mustEnableSwarm {
+			if (!missingApt && missingUfw) || mustEnableUfw || mustInstallDocker || mustEnableSwarm {
 				fmt.Print("\nRove will make the following changes to remote machine:\n\n")
-				if mustEnableUfw {
+				if !missingApt && missingUfw {
+					fmt.Println(" ~ Install firewall")
+				}
+				if (!missingApt && missingUfw) || mustEnableUfw {
 					fmt.Println(" ~ Enable firewall")
 				}
 				if mustInstallDocker {
@@ -119,6 +130,19 @@ func (cmd *MachineAddCommand) Run() error {
 				fmt.Println()
 			} else {
 				fmt.Println("\nNo changes needed.")
+			}
+
+			if !missingApt && missingUfw {
+				err = conn.
+					Run("sudo apt-get install -y ufw", func(res string) error {
+						fmt.Println("sudo apt-get install -y ufw", res)
+						mustEnableUfw = true
+						return nil
+					}).
+					Error()
+				if err != nil {
+					return err
+				}
 			}
 
 			if mustEnableUfw {
