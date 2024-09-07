@@ -29,6 +29,7 @@ type MachineAddCommand struct {
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool   `flag:"" name:"force" help:"Skip confirmations."`
 	Port       int64  `flag:"" name:"port" help:"SSH port of remote machine." default:"22"`
+	Skip       bool   `flag:"" name:"skip" help:"Skip installation steps on remote machine."`
 }
 
 func (cmd *MachineAddCommand) Run() error {
@@ -47,6 +48,11 @@ func (cmd *MachineAddCommand) Run() error {
 		}
 		err = SshConnect(fmt.Sprintf("%s:%d", cmd.Address, cmd.Port), cmd.User, key, func(conn SshRunner, stdin io.Reader) error {
 			fmt.Printf("\nConnected to remote address '%s@%s:%d'.\n", cmd.User, cmd.Address, cmd.Port)
+
+			if cmd.Skip {
+				fmt.Println("Skipping install steps.")
+				return nil
+			}
 
 			missingUfw := false
 			mustEnableUfw := true
