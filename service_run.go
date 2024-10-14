@@ -41,6 +41,10 @@ type DockerServiceInspectJson struct {
 				Replicas int64 `json:"Replicas"`
 			} `json:"Replicated"`
 		} `json:"Mode"`
+		UpdateConfig struct {
+			FailureAction string `json:"FailureAction"`
+			Order         string `json:"Order"`
+		} `json:"UpdateConfig"`
 	} `json:"Spec"`
 }
 
@@ -49,17 +53,19 @@ type ServiceRunCommand struct {
 	Image   string   `arg:"" name:"image" help:"Docker image."`
 	Command []string `arg:"" name:"command" optional:"" passthrough:"" help:"Docker command."`
 
-	ConfigFile string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
-	Env        []string `flag:"" name:"env" short:"e" sep:"none"`
-	Force      bool     `flag:"" name:"force" help:"Skip confirmations."`
-	Init       bool     `flag:"" name:"init"`
-	Machine    string   `flag:"" name:"machine" help:"Name of machine." default:""`
-	Networks   []string `flag:"" name:"network" help:"Network name."`
-	Publish    []string `flag:"" name:"publish" short:"p" sep:"none"`
-	Replicas   int64    `flag:"" name:"replicas" default:"1"`
-	Secrets    []string `flag:"" name:"secret" sep:"none"`
-	User       string   `flag:"" name:"user" short:"u"`
-	WorkDir    string   `flag:"" name:"workdir" short:"w"`
+	ConfigFile          string   `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Env                 []string `flag:"" name:"env" short:"e" sep:"none"`
+	Force               bool     `flag:"" name:"force" help:"Skip confirmations."`
+	Init                bool     `flag:"" name:"init"`
+	Machine             string   `flag:"" name:"machine" help:"Name of machine." default:""`
+	Networks            []string `flag:"" name:"network" help:"Network name."`
+	Publish             []string `flag:"" name:"publish" short:"p" sep:"none"`
+	Replicas            int64    `flag:"" name:"replicas" default:"1"`
+	Secrets             []string `flag:"" name:"secret" sep:"none"`
+	UpdateFailureAction string   `flag:"" name:"update-failure-action"`
+	UpdateOrder         string   `flag:"" name:"update-order"`
+	User                string   `flag:"" name:"user" short:"u"`
+	WorkDir             string   `flag:"" name:"workdir" short:"w"`
 }
 
 func (cmd *ServiceRunCommand) Run() error {
@@ -67,17 +73,30 @@ func (cmd *ServiceRunCommand) Run() error {
 		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			old := &ServiceState{}
 			new := &ServiceState{
-				Command:  cmd.Command,
-				Env:      cmd.Env,
-				Image:    cmd.Image,
-				Init:     cmd.Init,
-				Networks: cmd.Networks,
-				Publish:  cmd.Publish,
-				Replicas: fmt.Sprint(cmd.Replicas),
-				Secrets:  cmd.Secrets,
-				User:     cmd.User,
-				WorkDir:  cmd.WorkDir,
+				Command:             cmd.Command,
+				Env:                 cmd.Env,
+				Image:               cmd.Image,
+				Init:                cmd.Init,
+				Networks:            cmd.Networks,
+				Publish:             cmd.Publish,
+				Replicas:            fmt.Sprint(cmd.Replicas),
+				Secrets:             cmd.Secrets,
+				UpdateOrder:         cmd.UpdateOrder,
+				UpdateFailureAction: cmd.UpdateFailureAction,
+				User:                cmd.User,
+				WorkDir:             cmd.WorkDir,
 			}
+
+			updateFailureAction := cmd.UpdateFailureAction
+			if cmd.UpdateFailureAction == "" {
+				updateFailureAction = "pause"
+			}
+
+			updateOrder := cmd.UpdateOrder
+			if cmd.UpdateOrder == "" {
+				updateOrder = "stop-first"
+			}
+
 			command := ShellCommand{
 				Name: "docker service create",
 				Flags: []ShellFlag{
@@ -89,6 +108,16 @@ func (cmd *ServiceRunCommand) Run() error {
 						Check: true,
 						Name:  "replicas",
 						Value: fmt.Sprintf("%d", cmd.Replicas),
+					},
+					{
+						Check: true,
+						Name:  "update-failure-action",
+						Value: updateFailureAction,
+					},
+					{
+						Check: true,
+						Name:  "update-order",
+						Value: updateOrder,
 					},
 					{
 						AllowEmpty: true,
@@ -302,6 +331,14 @@ func (cmd *ServiceRunCommand) Run() error {
 					old.Publish = portsExisting
 					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)
 					old.Secrets = secretsExisting
+					old.UpdateFailureAction = dockerInspect[0].Spec.UpdateConfig.FailureAction
+					if old.UpdateFailureAction == "pause" {
+						old.UpdateFailureAction = ""
+					}
+					old.UpdateOrder = dockerInspect[0].Spec.UpdateConfig.Order
+					if old.UpdateOrder == "stop-first" {
+						old.UpdateOrder = ""
+					}
 					old.User = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.User
 					old.WorkDir = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Dir
 

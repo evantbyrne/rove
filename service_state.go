@@ -3,17 +3,19 @@ package rove
 import "strings"
 
 type ServiceState struct {
-	Command  []string
-	Env      []string
-	Image    string
-	Init     bool
-	Mounts   []string
-	Networks []string
-	Publish  []string
-	Replicas string
-	Secrets  []string
-	User     string
-	WorkDir  string
+	Command             []string
+	Env                 []string
+	Image               string
+	Init                bool
+	Mounts              []string
+	Networks            []string
+	Publish             []string
+	Replicas            string
+	Secrets             []string
+	UpdateFailureAction string
+	UpdateOrder         string
+	User                string
+	WorkDir             string
 }
 
 func (new *ServiceState) Diff(old *ServiceState) (string, DiffStatus) {
@@ -31,6 +33,8 @@ func (new *ServiceState) Diff(old *ServiceState) (string, DiffStatus) {
 	lines, status = diffSlices(lines, status, "publish", old.Publish, new.Publish)
 	lines, status = diffString(lines, status, "replicas", old.Replicas, new.Replicas)
 	lines, status = diffSlices(lines, status, "secret", old.Secrets, new.Secrets)
+	lines, status = diffString(lines, status, "update-failure-action", old.UpdateFailureAction, new.UpdateFailureAction)
+	lines, status = diffString(lines, status, "update-order", old.UpdateOrder, new.UpdateOrder)
 	lines, status = diffString(lines, status, "user", old.User, new.User)
 	lines, status = diffString(lines, status, "workdir", old.WorkDir, new.WorkDir)
 
