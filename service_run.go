@@ -6,6 +6,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/alessio/shellescape"
 )
@@ -42,8 +43,10 @@ type DockerServiceInspectJson struct {
 			} `json:"Replicated"`
 		} `json:"Mode"`
 		UpdateConfig struct {
+			Delay         uint64 `json:"Delay"`
 			FailureAction string `json:"FailureAction"`
 			Order         string `json:"Order"`
+			Parallelism   int64  `json:"Parallelism"`
 		} `json:"UpdateConfig"`
 	} `json:"Spec"`
 }
@@ -62,8 +65,10 @@ type ServiceRunCommand struct {
 	Publish             []string `flag:"" name:"publish" short:"p" sep:"none"`
 	Replicas            int64    `flag:"" name:"replicas" default:"1"`
 	Secrets             []string `flag:"" name:"secret" sep:"none"`
+	UpdateDelay         string   `flag:"" name:"update-delay"`
 	UpdateFailureAction string   `flag:"" name:"update-failure-action"`
 	UpdateOrder         string   `flag:"" name:"update-order"`
+	UpdateParallelism   int64    `flag:"" name:"update-parallelism" default:"1"`
 	User                string   `flag:"" name:"user" short:"u"`
 	WorkDir             string   `flag:"" name:"workdir" short:"w"`
 }
@@ -81,20 +86,19 @@ func (cmd *ServiceRunCommand) Run() error {
 				Publish:             cmd.Publish,
 				Replicas:            fmt.Sprint(cmd.Replicas),
 				Secrets:             cmd.Secrets,
+				UpdateDelay:         cmd.UpdateDelay,
 				UpdateOrder:         cmd.UpdateOrder,
 				UpdateFailureAction: cmd.UpdateFailureAction,
+				UpdateParallelism:   fmt.Sprint(cmd.UpdateParallelism),
 				User:                cmd.User,
 				WorkDir:             cmd.WorkDir,
 			}
 
-			updateFailureAction := cmd.UpdateFailureAction
-			if cmd.UpdateFailureAction == "" {
-				updateFailureAction = "pause"
-			}
-
-			updateOrder := cmd.UpdateOrder
-			if cmd.UpdateOrder == "" {
-				updateOrder = "stop-first"
+			updateDelay := ternary(cmd.UpdateDelay == "", "0s", cmd.UpdateDelay)
+			updateFailureAction := ternary(cmd.UpdateFailureAction == "", "pause", cmd.UpdateFailureAction)
+			updateOrder := ternary(cmd.UpdateOrder == "", "stop-first", cmd.UpdateOrder)
+			if new.UpdateParallelism == "1" {
+				new.UpdateParallelism = ""
 			}
 
 			command := ShellCommand{
@@ -111,6 +115,11 @@ func (cmd *ServiceRunCommand) Run() error {
 					},
 					{
 						Check: true,
+						Name:  "update-delay",
+						Value: updateDelay,
+					},
+					{
+						Check: true,
 						Name:  "update-failure-action",
 						Value: updateFailureAction,
 					},
@@ -118,6 +127,11 @@ func (cmd *ServiceRunCommand) Run() error {
 						Check: true,
 						Name:  "update-order",
 						Value: updateOrder,
+					},
+					{
+						Check: true,
+						Name:  "update-parallelism",
+						Value: fmt.Sprint(cmd.UpdateParallelism),
 					},
 					{
 						AllowEmpty: true,
@@ -331,6 +345,10 @@ func (cmd *ServiceRunCommand) Run() error {
 					old.Publish = portsExisting
 					old.Replicas = fmt.Sprint(dockerInspect[0].Spec.Mode.Replicated.Replicas)
 					old.Secrets = secretsExisting
+					if dockerInspect[0].Spec.UpdateConfig.Delay != 0 {
+						delayNs, _ := time.ParseDuration(fmt.Sprint(dockerInspect[0].Spec.UpdateConfig.Delay, "ns"))
+						old.UpdateDelay, _ = strings.CutSuffix(delayNs.String(), "m0s")
+					}
 					old.UpdateFailureAction = dockerInspect[0].Spec.UpdateConfig.FailureAction
 					if old.UpdateFailureAction == "pause" {
 						old.UpdateFailureAction = ""
@@ -338,6 +356,10 @@ func (cmd *ServiceRunCommand) Run() error {
 					old.UpdateOrder = dockerInspect[0].Spec.UpdateConfig.Order
 					if old.UpdateOrder == "stop-first" {
 						old.UpdateOrder = ""
+					}
+					old.UpdateParallelism = fmt.Sprint(dockerInspect[0].Spec.UpdateConfig.Parallelism)
+					if old.UpdateParallelism == "1" {
+						old.UpdateParallelism = ""
 					}
 					old.User = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.User
 					old.WorkDir = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Dir

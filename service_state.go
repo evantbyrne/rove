@@ -12,8 +12,10 @@ type ServiceState struct {
 	Publish             []string
 	Replicas            string
 	Secrets             []string
+	UpdateDelay         string
 	UpdateFailureAction string
 	UpdateOrder         string
+	UpdateParallelism   string
 	User                string
 	WorkDir             string
 }
@@ -33,8 +35,10 @@ func (new *ServiceState) Diff(old *ServiceState) (string, DiffStatus) {
 	lines, status = diffSlices(lines, status, "publish", old.Publish, new.Publish)
 	lines, status = diffString(lines, status, "replicas", old.Replicas, new.Replicas)
 	lines, status = diffSlices(lines, status, "secret", old.Secrets, new.Secrets)
+	lines, status = diffString(lines, status, "update-delay", old.UpdateDelay, new.UpdateDelay)
 	lines, status = diffString(lines, status, "update-failure-action", old.UpdateFailureAction, new.UpdateFailureAction)
 	lines, status = diffString(lines, status, "update-order", old.UpdateOrder, new.UpdateOrder)
+	lines, status = diffString(lines, status, "update-parallelism", old.UpdateParallelism, new.UpdateParallelism)
 	lines, status = diffString(lines, status, "user", old.User, new.User)
 	lines, status = diffString(lines, status, "workdir", old.WorkDir, new.WorkDir)
 
