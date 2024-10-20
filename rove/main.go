@@ -29,9 +29,10 @@ var cli struct {
 		List   rove.SecretListCommand   `cmd:""`
 	} `cmd:"" help:"Manage secrets."`
 	Service struct {
-		Delete rove.ServiceDeleteCommand `cmd:""`
-		List   rove.ServiceListCommand   `cmd:""`
-		Run    rove.ServiceRunCommand    `cmd:""`
+		Delete   rove.ServiceDeleteCommand   `cmd:""`
+		List     rove.ServiceListCommand     `cmd:""`
+		Rollback rove.ServiceRollbackCommand `cmd:""`
+		Run      rove.ServiceRunCommand      `cmd:""`
 	} `cmd:"" help:"Manage services."`
 	Task struct {
 		List rove.TaskListCommand `cmd:""`
