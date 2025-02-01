@@ -12,6 +12,7 @@ type LogsCommand struct {
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Follow     bool   `flag:"" name:"follow" short:"f" help:"Follow log output."`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 	Tail       int64  `flag:"" name:"tail" short:"n" help:"Number of lines to show from the end of the logs."`
 	Timeout    string `flag:"" name:"timeout" help:"Timeout duration for tail." default:"1h"`
@@ -59,7 +60,7 @@ func (cmd *LogsCommand) Run() error {
 		if cmd.Follow && cmd.Timeout != "" {
 			command.Name = fmt.Sprintf("timeout --verbose %s %s", cmd.Timeout, command.Name)
 		}
-		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
+		return SshMachineByName(cmd.Local, cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			return conn.Run(command.String(), func(res string) error {
 				fmt.Print(res)
 				return nil

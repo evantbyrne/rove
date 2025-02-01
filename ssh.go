@@ -9,11 +9,49 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/evantbyrne/trance"
+	"github.com/kballard/go-shellquote"
 	"golang.org/x/crypto/ssh"
 )
+
+type LocalRunner struct {
+	Err error
+}
+
+func (conn *LocalRunner) Error() error {
+	return conn.Err
+}
+
+func (conn *LocalRunner) OnError(callback func(error) error) SshRunner {
+	if conn.Err != nil {
+		conn.Err = callback(conn.Err)
+	}
+	return conn
+}
+
+func (conn *LocalRunner) Run(command string, callback func(string) error) SshRunner {
+	if conn.Err != nil {
+		return conn
+	}
+	var bufferStdout bytes.Buffer
+	words, err := shellquote.Split(command)
+	if err != nil {
+		conn.Err = fmt.Errorf("failed to shell split command '%s': %v", command, err)
+		return conn
+	}
+	cmd := exec.Command(words[0], words[1:]...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = &bufferStdout
+	if err := cmd.Run(); err != nil {
+		conn.Err = fmt.Errorf("failed to run command '%s': %v", command, err)
+		return conn
+	}
+	conn.Err = callback(bufferStdout.String())
+	return conn
+}
 
 func SshConnect(address string, user string, key []byte, callback func(conn SshRunner, stdin io.Reader) error) error {
 	signer, err := ssh.ParsePrivateKey(key)
@@ -43,7 +81,10 @@ func SshMachine(machine *Machine, callback func(conn SshRunner, stdin io.Reader)
 	return SshConnect(fmt.Sprintf("%s:%d", machine.Address, machine.Port), machine.User, key, callback)
 }
 
-func SshMachineByName(name string, callback func(conn SshRunner, stdin io.Reader) error) error {
+func SshMachineByName(local bool, name string, callback func(conn SshRunner, stdin io.Reader) error) error {
+	if local {
+		return callback(&LocalRunner{}, os.Stdin)
+	}
 	name = cmp.Or(name, GetPreference(DefaultMachine))
 	if name == "" {
 		return errors.New("🚫 No machine specified. Either run `rove machine use [NAME]` to set the default, or use the `--machine [NAME]` flag on individual commands")

@@ -17,6 +17,7 @@ type DockerServiceLsJson struct {
 type ServiceListCommand struct {
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Json       bool   `flag:"" name:"json" help:"Output as JSON."`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
@@ -41,7 +42,7 @@ type ServiceListPortJson struct {
 
 func (cmd *ServiceListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
+		return SshMachineByName(cmd.Local, cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			output := ServiceListJson{
 				Services: make([]ServiceListEntryJson, 0),
 			}

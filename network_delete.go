@@ -12,6 +12,7 @@ type NetworkDeleteCommand struct {
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool   `flag:"" name:"force" help:"Skip confirmations."`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
@@ -36,6 +37,6 @@ func (cmd *NetworkDeleteCommand) Do(conn SshRunner, stdin io.Reader) error {
 
 func (cmd *NetworkDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, cmd.Do)
+		return SshMachineByName(cmd.Local, cmd.Machine, cmd.Do)
 	})
 }

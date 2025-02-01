@@ -14,12 +14,13 @@ type ServiceDeleteCommand struct {
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool   `flag:"" name:"force" help:"Skip confirmations."`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
 func (cmd *ServiceDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
+		return SshMachineByName(cmd.Local, cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			old := &ServiceState{
 				Command: make([]string, 0),
 				Publish: make([]string, 0),

@@ -9,6 +9,7 @@ import (
 
 type LogoutCommand struct {
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 	Registry   string `flag:"" name:"registry" help:"Docker registry server."`
 }
@@ -37,6 +38,6 @@ func (cmd *LogoutCommand) Do(conn SshRunner, stdin io.Reader) error {
 
 func (cmd *LogoutCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, cmd.Do)
+		return SshMachineByName(cmd.Local, cmd.Machine, cmd.Do)
 	})
 }

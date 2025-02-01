@@ -14,6 +14,7 @@ type LoginCommand struct {
 	PasswordFile *os.File `arg:"" name:"password-file" help:"Password/token file. Use dash (-) to read from STDIN."`
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 	Registry   string `flag:"" name:"registry" help:"Docker registry server."`
 }
@@ -71,6 +72,6 @@ func (cmd *LoginCommand) Do(conn SshRunner, stdin io.Reader) error {
 
 func (cmd *LoginCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, cmd.Do)
+		return SshMachineByName(cmd.Local, cmd.Machine, cmd.Do)
 	})
 }

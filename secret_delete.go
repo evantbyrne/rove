@@ -12,12 +12,13 @@ type SecretDeleteCommand struct {
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Force      bool   `flag:"" name:"force" help:"Skip confirmations."`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
 func (cmd *SecretDeleteCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
+		return SshMachineByName(cmd.Local, cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			fmt.Printf("\nRove will delete the '%s' secret.\n", cmd.Name)
 			if err := confirmDeployment(cmd.Force, stdin); err != nil {
 				return err

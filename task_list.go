@@ -10,6 +10,7 @@ import (
 type TaskListCommand struct {
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Json       bool   `flag:"" name:"json" help:"Output as JSON."`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
@@ -27,7 +28,7 @@ type TaskListEntryJson struct {
 
 func (cmd *TaskListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
+		return SshMachineByName(cmd.Local, cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			output := TaskListJson{
 				Tasks: make([]TaskListEntryJson, 0),
 			}

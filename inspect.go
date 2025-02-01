@@ -14,6 +14,7 @@ type InspectCommand struct {
 	Name string `arg:"" name:"name" help:"Name of service or task."`
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 	Json       bool   `flag:"" name:"json"`
 }
@@ -140,6 +141,6 @@ func (cmd *InspectCommand) Do(conn SshRunner, stdin io.Reader) error {
 
 func (cmd *InspectCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, cmd.Do)
+		return SshMachineByName(cmd.Local, cmd.Machine, cmd.Do)
 	})
 }

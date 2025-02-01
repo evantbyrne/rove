@@ -17,6 +17,7 @@ type DockerSecretLsJson struct {
 type SecretListCommand struct {
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Json       bool   `flag:"" name:"json" help:"Output as JSON."`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
@@ -33,7 +34,7 @@ type SecretJson struct {
 
 func (cmd *SecretListCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
+		return SshMachineByName(cmd.Local, cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			return conn.
 				Run("docker secret ls --format json --filter label=rove", func(res string) error {
 					output := make([]DockerSecretLsJson, 0)

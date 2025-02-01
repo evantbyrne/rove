@@ -17,6 +17,7 @@ type SecretCreateCommand struct {
 
 	ConfigFile string `flag:"" name:"config" help:"Config file." type:"path" default:".rove"`
 	Json       bool   `flag:"" name:"json" help:"Output as JSON."`
+	Local      bool   `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine    string `flag:"" name:"machine" help:"Name of machine." default:""`
 }
 
@@ -85,6 +86,6 @@ func (cmd *SecretCreateCommand) Do(conn SshRunner, stdin io.Reader) error {
 
 func (cmd *SecretCreateCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, cmd.Do)
+		return SshMachineByName(cmd.Local, cmd.Machine, cmd.Do)
 	})
 }

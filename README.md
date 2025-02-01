@@ -82,6 +82,11 @@ Rove ships as a single binary which may be placed wherever you please, usually a
 Rove currently supports running the command line client on MacOS and Linux generally. It fully supports deploying to Ubuntu 24 and Debian 12 or later, with plans to more fully support other Linux distributions once firewall configuration has been implemented for systems that don't support UFW. Both x86 and Arm architectures are supported.
 
 
+## Local Development
+
+Deploy to your local machine by providing the `--local` flag to commands.
+
+
 ## Security
 
 The `rove login` command uses `docker login` behind the scenes to authenticate with container registries. Secrets utilize Swarm's secrets storage, which mounts secrets files in the `/run/secrets` directory on configured containers. It is inadvisable to store secrets within environment variables. Rove is not designed to harden Docker installations.

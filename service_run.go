@@ -60,6 +60,7 @@ type ServiceRunCommand struct {
 	Env                 []string `flag:"" name:"env" short:"e" sep:"none"`
 	Force               bool     `flag:"" name:"force" help:"Skip confirmations."`
 	Init                bool     `flag:"" name:"init"`
+	Local               bool     `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine             string   `flag:"" name:"machine" help:"Name of machine." default:""`
 	Networks            []string `flag:"" name:"network" help:"Network name."`
 	Publish             []string `flag:"" name:"publish" short:"p" sep:"none"`
@@ -75,7 +76,7 @@ type ServiceRunCommand struct {
 
 func (cmd *ServiceRunCommand) Run() error {
 	return Database(cmd.ConfigFile, func() error {
-		return SshMachineByName(cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
+		return SshMachineByName(cmd.Local, cmd.Machine, func(conn SshRunner, stdin io.Reader) error {
 			old := &ServiceState{}
 			new := &ServiceState{
 				Command:             cmd.Command,
