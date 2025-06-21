@@ -23,6 +23,7 @@ type TaskRunCommand struct {
 	Replicas   int64    `flag:"" name:"replicas" default:"1"`
 	Secrets    []string `flag:"" name:"secret" sep:"none"`
 	User       string   `flag:"" name:"user" short:"u"`
+	Verbose    bool     `flag:"" name:"verbose"`
 	WorkDir    string   `flag:"" name:"workdir" short:"w"`
 }
 
@@ -127,6 +128,22 @@ func (cmd *TaskRunCommand) Run() error {
 				})
 			}
 
+			commandPull := ShellCommand{
+				Name: "docker image pull",
+				Args: []ShellArg{
+					{
+						Check: true,
+						Value: shellescape.Quote(cmd.Image),
+					},
+				},
+				Flags: []ShellFlag{
+					{
+						Check: true,
+						Name:  "quiet",
+					},
+				},
+			}
+
 			diffText, _ := new.Diff(old)
 			fmt.Print("\nRove will deploy:\n\n")
 			fmt.Println(" + task:")
@@ -138,6 +155,12 @@ func (cmd *TaskRunCommand) Run() error {
 			fmt.Println("\nDeploying...")
 
 			return conn.
+				Run(commandPull.String(), func(res string) error {
+					if cmd.Verbose {
+						fmt.Printf("\n[verbose] %s: %s", commandPull.String(), res)
+					}
+					return nil
+				}).
 				Run(command.String(), func(res string) error {
 					fmt.Print("\nRove deployed task: ", res, "\n")
 					return nil

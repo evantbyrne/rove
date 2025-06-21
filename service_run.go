@@ -71,6 +71,7 @@ type ServiceRunCommand struct {
 	UpdateOrder         string   `flag:"" name:"update-order"`
 	UpdateParallelism   int64    `flag:"" name:"update-parallelism" default:"1"`
 	User                string   `flag:"" name:"user" short:"u"`
+	Verbose             bool     `flag:"" name:"verbose"`
 	WorkDir             string   `flag:"" name:"workdir" short:"w"`
 }
 
@@ -148,6 +149,23 @@ func (cmd *ServiceRunCommand) Run() error {
 					},
 				},
 			}
+
+			commandPull := ShellCommand{
+				Name: "docker image pull",
+				Args: []ShellArg{
+					{
+						Check: true,
+						Value: shellescape.Quote(cmd.Image),
+					},
+				},
+				Flags: []ShellFlag{
+					{
+						Check: true,
+						Name:  "quiet",
+					},
+				},
+			}
+
 			err := conn.
 				Run(fmt.Sprint("docker service ls --format json --filter label=rove=service --filter name=", cmd.Name), func(res string) error {
 					if lines := strings.Split(strings.ReplaceAll(res, "\r\n", "\n"), "\n"); len(lines) > 1 {
@@ -410,6 +428,12 @@ func (cmd *ServiceRunCommand) Run() error {
 			fmt.Println("\nDeploying...")
 
 			return conn.
+				Run(commandPull.String(), func(res string) error {
+					if cmd.Verbose {
+						fmt.Printf("\n[verbose] %s: %s", commandPull.String(), res)
+					}
+					return nil
+				}).
 				Run(command.String(), func(res string) error {
 					fmt.Printf("\nRove deployed '%s'.\n\n", cmd.Name)
 					return nil
