@@ -31,6 +31,7 @@ var cli struct {
 	Service struct {
 		Delete   rove.ServiceDeleteCommand   `cmd:""`
 		List     rove.ServiceListCommand     `cmd:""`
+		Redeploy rove.ServiceRedeployCommand `cmd:""`
 		Rollback rove.ServiceRollbackCommand `cmd:""`
 		Run      rove.ServiceRunCommand      `cmd:""`
 	} `cmd:"" help:"Manage services."`

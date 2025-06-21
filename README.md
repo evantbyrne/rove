@@ -60,6 +60,8 @@ Commands:
 
   service list [flags]
 
+  service redeploy <name> [flags]
+
   service rollback <name> [flags]
 
   service run <name> <image> [<command> ...] [flags]
