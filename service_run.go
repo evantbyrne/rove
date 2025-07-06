@@ -313,6 +313,9 @@ func (cmd *ServiceRunCommand) Run() error {
 					portsExisting := make([]string, 0)
 					for _, entry := range dockerInspect[0].Spec.EndpointSpec.Ports {
 						port := fmt.Sprintf("%d:%d", entry.TargetPort, entry.PublishedPort)
+						if entry.Protocol != "tcp" {
+							port += fmt.Sprint("/", entry.Protocol)
+						}
 						portsExisting = append(portsExisting, port)
 						if !slices.Contains(cmd.Publish, port) {
 							command.Flags = append(command.Flags, ShellFlag{

@@ -51,12 +51,7 @@ func (cmd *SecretListCommand) Run() error {
 					if cmd.Json {
 						var t SecretListJson
 						for _, secret := range output {
-							t.Secrets = append(t.Secrets, SecretJson{
-								CreatedAt: secret.CreatedAt,
-								Id:        secret.Id,
-								Name:      secret.Name,
-								UpdatedAt: secret.UpdatedAt,
-							})
+							t.Secrets = append(t.Secrets, SecretJson(secret))
 						}
 						out, err := json.MarshalIndent(t, "", "    ")
 						if err != nil {

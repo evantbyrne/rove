@@ -47,10 +47,7 @@ func (cmd *NetworkListCommand) Run() error {
 					if cmd.Json {
 						var t NetworkListJson
 						for _, network := range output {
-							t.Networks = append(t.Networks, NetworkJson{
-								Id:   network.Id,
-								Name: network.Name,
-							})
+							t.Networks = append(t.Networks, NetworkJson(network))
 						}
 						out, err := json.MarshalIndent(t, "", "    ")
 						if err != nil {
