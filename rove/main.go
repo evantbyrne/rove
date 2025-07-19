@@ -39,6 +39,9 @@ var cli struct {
 		List rove.TaskListCommand `cmd:""`
 		Run  rove.TaskRunCommand  `cmd:""`
 	} `cmd:"" help:"Manage one-off tasks."`
+	Volume struct {
+		Add rove.VolumeAddCommand `cmd:""`
+	} `cmd:"" help:"Manage volumes."`
 }
 
 func main() {
