@@ -11,15 +11,45 @@ import (
 	"github.com/alessio/shellescape"
 )
 
+// Reference: https://github.com/moby/moby/blob/master/api/types/mount/mount.go
+type DockerServiceMountJson struct {
+	BindOptions struct {
+		Propagation            string `json:"Propagation"`
+		NonRecursive           bool   `json:"NonRecursive"`
+		CreateMountpoint       bool   `json:"CreateMountpoint"`
+		ReadOnlyNonRecursive   bool   `json:"ReadOnlyNonRecursive"`
+		ReadOnlyForceRecursive bool   `json:"ReadOnlyForceRecursive"`
+	} `json:"BindOptions"`
+	Consistency  string `json:"Consistency"`
+	ReadOnly     bool   `json:"ReadOnly"`
+	Source       string `json:"Source"`
+	Target       string `json:"Target"`
+	TmpfsOptions struct {
+		Mode      string `json:"Mode"`
+		SizeBytes uint64 `json:"SizeBytes"`
+	} `json:"TmpfsOptions"`
+	Type          string `json:"Type"`
+	VolumeOptions struct {
+		DriverConfig struct {
+			Name    string            `json:"Name"`
+			Options map[string]string `json:"Options"`
+		} `json:"VolumeOptions"`
+		NoCopy  bool              `json:"NoCopy"`
+		Labels  map[string]string `json:"Labels"`
+		Subpath string            `json:"Subpath"`
+	}
+}
+
 type DockerServiceInspectJson struct {
 	Spec struct {
 		TaskTemplate struct {
 			ContainerSpec struct {
-				Args    []string `json:"Args"`
-				Dir     string   `json:"Dir"`
-				Env     []string `json:"Env"`
-				Image   string   `json:"Image"`
-				Init    bool     `json:"Init"`
+				Args    []string                 `json:"Args"`
+				Dir     string                   `json:"Dir"`
+				Env     []string                 `json:"Env"`
+				Image   string                   `json:"Image"`
+				Init    bool                     `json:"Init"`
+				Mounts  []DockerServiceMountJson `json:"Mounts"`
 				Secrets []struct {
 					SecretName string `json:"SecretName"`
 				} `json:"Secrets"`
@@ -62,6 +92,7 @@ type ServiceRunCommand struct {
 	Init                bool     `flag:"" name:"init"`
 	Local               bool     `flag:"" name:"local" help:"Skip SSH and run on local machine."`
 	Machine             string   `flag:"" name:"machine" help:"Name of machine." default:""`
+	Mounts              []string `flag:"" name:"mount" sep:"none"`
 	Networks            []string `flag:"" name:"network" help:"Network name."`
 	Publish             []string `flag:"" name:"publish" short:"p" sep:"none"`
 	Replicas            int64    `flag:"" name:"replicas" default:"1"`
@@ -84,6 +115,7 @@ func (cmd *ServiceRunCommand) Run() error {
 				Env:                 cmd.Env,
 				Image:               cmd.Image,
 				Init:                cmd.Init,
+				Mounts:              cmd.Mounts,
 				Networks:            cmd.Networks,
 				Publish:             cmd.Publish,
 				Replicas:            fmt.Sprint(cmd.Replicas),
@@ -188,6 +220,13 @@ func (cmd *ServiceRunCommand) Run() error {
 							Value: env,
 						})
 					}
+					for _, mount := range cmd.Mounts {
+						command.Flags = append(command.Flags, ShellFlag{
+							Check: mount != "",
+							Name:  "mount",
+							Value: mount,
+						})
+					}
 					for _, network := range cmd.Networks {
 						command.Flags = append(command.Flags, ShellFlag{
 							Check: network != "",
@@ -252,7 +291,57 @@ func (cmd *ServiceRunCommand) Run() error {
 						}
 					}
 
-					// TODO: Mounts
+					// Mounts
+					oldMountStrings := make(map[string]string, 0)
+					oldMountTargets := make([]string, 0)
+					newMountTargets := make([]string, 0)
+
+					for _, mount := range dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Mounts {
+						oldMountTargets = append(oldMountTargets, mount.Target)
+						oldMountStrings[mount.Target] = formatStateMount(mount)
+						old.Mounts = append(old.Mounts, oldMountStrings[mount.Target])
+					}
+
+					new.Mounts = make([]string, 0)
+					for _, mount := range cmd.Mounts {
+						// Find new mount targets
+						newMountTarget := ""
+						for _, mountOption := range strings.Split(mount, ",") {
+							mountOptionParts := strings.SplitN(mountOption, "=", 2)
+							if len(mountOptionParts) > 1 && (mountOptionParts[0] == "destination" || mountOptionParts[0] == "dst" || mountOptionParts[0] == "target") {
+								newMountTarget = mountOptionParts[1]
+							}
+						}
+						if newMountTarget == "" {
+							return fmt.Errorf("cannot add mount without target: '%s'. Documentation: https://docs.docker.com/reference/cli/docker/service/create/#mount", mount)
+						}
+
+						newMountTargets = append(newMountTargets, newMountTarget)
+
+						if slices.Contains(oldMountTargets, newMountTarget) {
+							// Copy old mount string to new state, because we don't auto-delete mutated mounts
+							new.Mounts = append(new.Mounts, oldMountStrings[newMountTarget])
+						} else {
+							// Add new mounts
+							new.Mounts = append(new.Mounts, mount)
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: true,
+								Name:  "mount-add",
+								Value: mount,
+							})
+						}
+					}
+					for _, oldMountTarget := range oldMountTargets {
+						// Remove mounts
+						// TODO: Flag for forcing removal of mounts.
+						if !slices.Contains(newMountTargets, oldMountTarget) {
+							command.Flags = append(command.Flags, ShellFlag{
+								Check: true,
+								Name:  "mount-rm",
+								Value: oldMountTarget,
+							})
+						}
+					}
 
 					// Networks
 					networksExisting := make([]string, 0)

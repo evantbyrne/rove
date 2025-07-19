@@ -1,6 +1,14 @@
 package rove
 
-import "strings"
+import (
+	"fmt"
+	"maps"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/stoewer/go-strcase"
+)
 
 type ServiceState struct {
 	Command             []string
@@ -51,4 +59,67 @@ func (new *ServiceState) Diff(old *ServiceState) (string, DiffStatus) {
 		res = append(res, line.StringPadded(maxLeft))
 	}
 	return strings.Join(res, "\n"), status
+}
+
+func formatStateMapKebab(state map[string]string) string {
+	var out strings.Builder
+	for i, key := range slices.Sorted(maps.Keys(state)) {
+		if i != 0 {
+			out.WriteString(",")
+		}
+		out.WriteString(fmt.Sprint(strcase.KebabCase(key), "=", state[key]))
+	}
+	return out.String()
+}
+
+func formatStateMount(mount DockerServiceMountJson) string {
+	out := make([]string, 0)
+	if mount.BindOptions.Propagation != "" {
+		out = append(out, fmt.Sprint("bind-propagation=", mount.BindOptions.Propagation))
+	}
+	if mount.BindOptions.NonRecursive {
+		out = append(out, "bind-nonrecursive=true")
+	}
+	if mount.Consistency != "" {
+		out = append(out, fmt.Sprint("consistency=", mount.Consistency))
+	}
+	if mount.ReadOnly {
+		out = append(out, "readonly=true")
+	}
+	if mount.Source != "" {
+		out = append(out, fmt.Sprint("source=", mount.Source))
+	}
+	if mount.Target != "" {
+		out = append(out, fmt.Sprint("target=", mount.Target))
+	}
+	if mount.TmpfsOptions.Mode != "" {
+		out = append(out, fmt.Sprint("tmpfs-mode=", mount.TmpfsOptions.Mode))
+	}
+	if mount.TmpfsOptions.SizeBytes > 0 {
+		out = append(out, fmt.Sprint("tmpfs-size=", strconv.FormatUint(mount.TmpfsOptions.SizeBytes, 10)))
+	}
+	if mount.Type != "" {
+		out = append(out, fmt.Sprint("type=", mount.Type))
+	}
+	if mount.VolumeOptions.DriverConfig.Name != "" {
+		out = append(out, fmt.Sprint("volume-driver=", mount.VolumeOptions.DriverConfig.Name))
+	}
+	if mount.VolumeOptions.NoCopy {
+		out = append(out, "volume-nocopy=true")
+	}
+	if len(mount.VolumeOptions.Labels) > 0 {
+		labels := make([]string, 0)
+		for _, key := range slices.Sorted(maps.Keys(mount.VolumeOptions.Labels)) {
+			labels = append(labels, fmt.Sprint(key, "=", mount.VolumeOptions.Labels[key]))
+		}
+		out = append(out, "volume-label="+strings.Join(labels, ","))
+	}
+	if len(mount.VolumeOptions.DriverConfig.Options) > 0 {
+		labels := make([]string, 0)
+		for _, key := range slices.Sorted(maps.Keys(mount.VolumeOptions.DriverConfig.Options)) {
+			labels = append(labels, fmt.Sprint(key, "=", mount.VolumeOptions.DriverConfig.Options[key]))
+		}
+		out = append(out, "volume-opt="+strings.Join(labels, ","))
+	}
+	return strings.Join(out, ",")
 }

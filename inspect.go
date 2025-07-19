@@ -45,7 +45,11 @@ func (cmd *InspectCommand) Do(conn SshRunner, stdin io.Reader) error {
 				}
 				old := &ServiceState{}
 				old.Env = dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Env
-				// TODO: Mounts
+
+				// Mounts
+				for _, mount := range dockerInspect[0].Spec.TaskTemplate.ContainerSpec.Mounts {
+					old.Mounts = append(old.Mounts, formatStateMount(mount))
+				}
 
 				// Networks
 				networksExisting := make([]string, 0)
