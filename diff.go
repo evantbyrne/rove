@@ -32,9 +32,10 @@ func diffBool(lines []DiffLine, status DiffStatus, name string, old bool, new bo
 	if new {
 		if !old {
 			lines = append(lines, DiffLine{Left: name, Right: "true", Status: DiffCreate})
-			if status == DiffSame {
+			switch status {
+			case DiffSame:
 				status = DiffCreate
-			} else if status == DiffDelete {
+			case DiffDelete:
 				status = DiffUpdate
 			}
 		} else {
@@ -43,9 +44,10 @@ func diffBool(lines []DiffLine, status DiffStatus, name string, old bool, new bo
 	} else {
 		if old {
 			lines = append(lines, DiffLine{Left: name, Right: "true", Status: DiffDelete})
-			if status == DiffSame {
+			switch status {
+			case DiffSame:
 				status = DiffDelete
-			} else if status == DiffCreate {
+			case DiffCreate:
 				status = DiffUpdate
 			}
 		}
@@ -62,18 +64,20 @@ func diffSlices(lines []DiffLine, status DiffStatus, name string, old []string, 
 	}
 	if len(old) == 0 && len(new) > 0 {
 		lines = append(lines, DiffLine{Left: name, Right: mustMarshal(new), Status: DiffCreate})
-		if status == DiffSame || status == DiffCreate {
+		switch status {
+		case DiffSame, DiffCreate:
 			status = DiffCreate
-		} else if status == DiffDelete {
+		case DiffDelete:
 			status = DiffUpdate
 		}
 		return lines, status
 	}
 	if len(old) > 0 && len(new) == 0 {
 		lines = append(lines, DiffLine{Left: name, Right: mustMarshal(old), Status: DiffDelete})
-		if status == DiffSame || status == DiffDelete {
+		switch status {
+		case DiffSame, DiffDelete:
 			status = DiffDelete
-		} else if status == DiffCreate {
+		case DiffCreate:
 			status = DiffUpdate
 		}
 		return lines, DiffDelete
@@ -92,18 +96,20 @@ func diffString(lines []DiffLine, status DiffStatus, name string, old string, ne
 	}
 	if len(old) == 0 && len(new) > 0 {
 		lines = append(lines, DiffLine{Left: name, Right: mustMarshal(new), Status: DiffCreate})
-		if status == DiffSame || status == DiffCreate {
+		switch status {
+		case DiffSame, DiffCreate:
 			status = DiffCreate
-		} else if status == DiffDelete {
+		case DiffDelete:
 			status = DiffUpdate
 		}
 		return lines, status
 	}
 	if len(old) > 0 && len(new) == 0 {
 		lines = append(lines, DiffLine{Left: name, Right: mustMarshal(old), Status: DiffDelete})
-		if status == DiffSame || status == DiffDelete {
+		switch status {
+		case DiffSame, DiffDelete:
 			status = DiffDelete
-		} else if status == DiffCreate {
+		case DiffCreate:
 			status = DiffUpdate
 		}
 		return lines, DiffDelete
