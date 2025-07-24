@@ -40,8 +40,10 @@ var cli struct {
 		Run  rove.TaskRunCommand  `cmd:""`
 	} `cmd:"" help:"Manage one-off tasks."`
 	Volume struct {
-		Add    rove.VolumeAddCommand    `cmd:""`
-		Delete rove.VolumeDeleteCommand `cmd:""`
+		Add     rove.VolumeAddCommand     `cmd:""`
+		Delete  rove.VolumeDeleteCommand  `cmd:""`
+		Inspect rove.VolumeInspectCommand `cmd:""`
+		List    rove.VolumeListCommand    `cmd:""`
 	} `cmd:"" help:"Manage volumes."`
 }
 
